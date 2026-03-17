@@ -1,3 +1,20 @@
+// Copyright © 2026 OBINNA JAMES EJIOFOR
+// All Rights Reserved.
+//
+// This file is part of the M.V.R.ESPRINT1 Sovereign Execution System,
+// including TLBSS geometry, the Universal Execution Layer, the
+// Deterministic IR, Rust Codegen Pipeline, SovereignBus, and the
+// Cryptographic Audit Chain.
+//
+// No part of this file, its algorithms, structures, or designs may be
+// copied, reproduced, modified, distributed, published, sublicensed,
+// reverse-engineered, or used to create derivative works without the
+// express written permission of OBINNA JAMES EJIOFOR.
+//
+// This software contains proprietary trade secrets and confidential
+// intellectual property. Unauthorized use is strictly prohibited.
+
+
 #![deny(unsafe_code)]
 
 use crate::failure_axis::{FailureAxis, SystemHalt};
@@ -30,8 +47,13 @@ impl TriEntityState {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct PlantClass {
-    pub class_id: u8,
+pub enum PlantClass {
+    Solar,
+    Wind,
+    Hydro,
+    Nuclear,
+    Coal,
+    Gas,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -41,13 +63,14 @@ pub struct ResonanceProfile {
 
 #[derive(Debug, Clone, Copy)]
 pub struct DimensionalTransitionAlert {
-    pub tick: u64,
-    pub entity_index: usize,
+    pub boundary_tick: u64,
+    pub window_seconds: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct GridStabilityIndex {
     pub l6_coherence: f32,
+    pub score_0_to_100: f32,
     pub current_state_hash: u32,
 }
 
@@ -81,26 +104,41 @@ impl Default for TlbssConfig {
 
 pub struct TlbssIntegrityEngine {
     config: TlbssConfig,
+    plant_class: PlantClass,
+    current_state: TriEntityState,
+    current_tick: u64,
 }
 
 impl TlbssIntegrityEngine {
-    pub fn new(config: TlbssConfig) -> Self {
-        Self { config }
+    pub fn new(plant_class: PlantClass, initial_state: TriEntityState, config: TlbssConfig) -> Self {
+        Self { config, plant_class, current_state: initial_state, current_tick: 0 }
     }
 
-    pub fn process_tick(&self, tick: u64, state: TriEntityState) -> TlbssTickRecord {
-        TlbssTickRecord {
-            tick,
-            state,
-            stability_index: GridStabilityIndex {
-                l6_coherence: 0.95,
-                current_state_hash: 0,
-            },
+    pub fn tick(&mut self, external_signals: [u8; 3]) -> Result<TlbssTickRecord, SystemHalt> {
+        // Update state based on external signals
+        self.current_state = TriEntityState::new(
+            self.current_state.entity_a.wrapping_add(external_signals[0] as u32),
+            self.current_state.entity_b.wrapping_add(external_signals[1] as u32),
+            self.current_state.entity_c.wrapping_add(external_signals[2] as u32),
+        )?;
+
+        self.current_tick += 1;
+
+        let stability_index = GridStabilityIndex {
+            l6_coherence: 0.95,
+            score_0_to_100: 95.0,
+            current_state_hash: 0,
+        };
+
+        Ok(TlbssTickRecord {
+            tick: self.current_tick,
+            state: self.current_state,
+            stability_index,
             boundary_condition: false,
             coherence_saturated: false,
             delta_state: 0,
             dimensional_transition: None,
-        }
+        })
     }
 }
 
@@ -126,9 +164,9 @@ mod tests {
 
     #[test]
     fn engine_creates_tick_record() {
-        let engine = TlbssIntegrityEngine::new(TlbssConfig::default());
-        let state = TriEntityState::new(1, 1, 1).unwrap();
-        let rec = engine.process_tick(0, state);
-        assert_eq!(rec.tick, 0);
+        let initial = TriEntityState::new(0, 0, 0).unwrap();
+        let mut engine = TlbssIntegrityEngine::new(PlantClass::Solar, initial, TlbssConfig::default());
+        let rec = engine.tick([1, 1, 1]).unwrap();
+        assert_eq!(rec.tick, 1);
     }
 }

@@ -1,3 +1,20 @@
+// Copyright © 2026 OBINNA JAMES EJIOFOR
+// All Rights Reserved.
+//
+// This file is part of the M.V.R.ESPRINT1 Sovereign Execution System,
+// including TLBSS geometry, the Universal Execution Layer, the
+// Deterministic IR, Rust Codegen Pipeline, SovereignBus, and the
+// Cryptographic Audit Chain.
+//
+// No part of this file, its algorithms, structures, or designs may be
+// copied, reproduced, modified, distributed, published, sublicensed,
+// reverse-engineered, or used to create derivative works without the
+// express written permission of OBINNA JAMES EJIOFOR.
+//
+// This software contains proprietary trade secrets and confidential
+// intellectual property. Unauthorized use is strictly prohibited.
+
+
 #![deny(unsafe_code)]
 
 use core_affinity::CoreId;
@@ -6,24 +23,24 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use mvre_sprint_guardian::audit_guardian::AuditGuardian;
-use mvre_sprint_guardian::drivers::ptp_clock::PtpClock;
-use mvre_sprint_guardian::hal_output::{DeterministicOutputHal, OutputCommand};
-use mvre_sprint_guardian::operator_interface::evaluate_compliance_status;
-use mvre_sprint_guardian::regulatory_policy::GovernanceMode;
-use mvre_sprint_guardian::scheduler::TriEntityScheduler;
-use mvre_sprint_guardian::sovereign_kernel::{
+use m_v_r_esprint1::audit_guardian::AuditGuardian;
+use m_v_r_esprint1::drivers::ptp_clock::PtpClock;
+use m_v_r_esprint1::hal_output::{DeterministicOutputHal, OutputCommand};
+use m_v_r_esprint1::operator_interface::evaluate_compliance_status;
+use m_v_r_esprint1::regulatory_policy::GovernanceMode;
+use m_v_r_esprint1::scheduler::TriEntityScheduler;
+use m_v_r_esprint1::sovereign_kernel::{
     signer_from_env, L7Disposition, SovereignKernel, SovereignKernelConfig,
 };
-use mvre_sprint_guardian::sovereign_trace::streamer::TraceStreamer;
-use mvre_sprint_guardian::sovereign_trace::{append_critical_fault_event, SovereignTrace};
-use mvre_sprint_guardian::sp_api::admissibility::GlobalAdmissibilityMatrix;
-use mvre_sprint_guardian::sp_api::resonance::ResonanceStore;
-use mvre_sprint_guardian::sp_api::transition::TransitionBroadcaster;
-use mvre_sprint_guardian::tlbss_integrity_engine::{
+use m_v_r_esprint1::sovereign_trace::streamer::TraceStreamer;
+use m_v_r_esprint1::sovereign_trace::{append_critical_fault_event, SovereignTrace};
+use m_v_r_esprint1::sp_api::admissibility::GlobalAdmissibilityMatrix;
+use m_v_r_esprint1::sp_api::resonance::ResonanceStore;
+use m_v_r_esprint1::sp_api::transition::TransitionBroadcaster;
+use m_v_r_esprint1::tlbss_integrity_engine::{
     PlantClass, TlbssConfig, TlbssIntegrityEngine, TriEntityState,
 };
-use mvre_sprint_guardian::visions_core::VisionsCore;
+use m_v_r_esprint1::visions_core::VisionsCore;
 
 /*
 NERC (Reliability → invariants)
@@ -95,24 +112,29 @@ struct SidecarSharedState {
 
 fn env_bool(name: &str, default: bool) -> bool {
     std::env::var(name)
-        /* Lines 39-42 omitted */
+        .map(|v| v.parse().unwrap_or(default))
+        .unwrap_or(default)
 }
 
 fn env_u64(name: &str, default: u64) -> u64 {
     std::env::var(name)
-        /* Lines 46-49 omitted */
+        .map(|v| v.parse().unwrap_or(default))
+        .unwrap_or(default)
 }
 
 fn env_usize(name: &str, default: usize) -> usize {
     std::env::var(name)
-        /* Lines 53-56 omitted */
+        .map(|v| v.parse().unwrap_or(default))
+        .unwrap_or(default)
 }
 
 fn resolve_core(core_ids: &[CoreId], requested_id: usize, role: &str) -> CoreId {
     if let Some(core) = core_ids.iter().find(|c| c.id == requested_id) {/* Lines 60-61 omitted */}
 
     let available = core_ids
-        /* Lines 64-67 omitted */
+        .iter()
+        .map(|c| c.id.to_string())
+        .collect::<Vec<_>>()
         .join(",");
     eprintln!(
         /* Lines 69-70 omitted */
@@ -128,10 +150,24 @@ fn spawn_sidecar(shared: Arc<SidecarSharedState>, sidecar_core: CoreId) -> threa
 fn main() {
     // Pre-flight fail-fast gate: block 1kHz loop initialization if environment
     // or binary integrity is non-compliant.
-    match evaluate_compliance_status("artifacts") {/* Lines 136-167 omitted */}
+    match evaluate_compliance_status("artifacts") {
+        Ok(_) => {},
+        Err(e) => {
+            eprintln!("Compliance check failed: {:?}", e);
+            std::process::exit(1);
+        }
+    }
 
-    let signer = match signer_from_env() {/* Lines 170-175 omitted */};
-    let config = SovereignKernelConfig {/* Lines 177-182 omitted */};
+    let signer = match signer_from_env() {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Signer init failed: {:?}", e);
+            std::process::exit(1);
+        }
+    };
+    let config = SovereignKernelConfig {
+        max_ticks: env_u64("MVRE_MAX_TICKS", 1000000),
+    };
     let require_sidecar = env_bool("MVRE_REQUIRE_SIDECAR", false);
     let sidecar_timeout_ticks = env_u64("MVRE_SIDECAR_HEARTBEAT_TIMEOUT_TICKS", 250);
     let p_api_cpu_id = env_usize("P_API_CPU_ID", 2);
@@ -147,6 +183,12 @@ fn main() {
 
     let mut kernel = SovereignKernel::new(signer, config);
     let mut scheduler = TriEntityScheduler::new();
-    let tlbss_initial = match TriEntityState::new(0, 0, 0) {/* Lines 214-222 omitted */};
+    let tlbss_initial = match TriEntityState::new(0, 0, 0) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("TLBSS init failed: {:?}", e);
+            std::process::exit(1);
+        }
+    };
     /* Lines 223-418 omitted */
 }
