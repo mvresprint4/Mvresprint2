@@ -1,0 +1,9 @@
+[package]
+name = "m_v_r_esprint1"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sha2 = "0.10"
+ed25519-dalek = "2.0"
+tempfile = "3.8"

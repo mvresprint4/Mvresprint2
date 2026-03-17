@@ -34,6 +34,16 @@ pub struct SovereignTrace {
     pub governance_mode: GovernanceMode,
     pub legal_citation: LegalCitation,
     pub timestamp_ms: u64,
+    pub timestamp_us: u64,
+    pub grid_sigma: u8,
+    pub ambient_temp: f32,
+    pub inverter_current: f64,
+    pub ai_requested_p: f64,
+    pub kernel_output_p: f64,
+    pub active_governance: GovernanceMode,
+    pub legal_justification: Option<LegalCitation>,
+    pub is_authenticated: bool,
+    pub state_transition: bool,
 }
 
 impl SovereignTrace {
@@ -49,8 +59,18 @@ impl SovereignTrace {
             requested_setpoint: requested,
             actual_setpoint: actual,
             governance_mode: mode,
-            legal_citation: citation,
+            legal_citation: citation.clone(),
             timestamp_ms: 0,
+            timestamp_us: 0,
+            grid_sigma: 0,
+            ambient_temp: 0.0,
+            inverter_current: 0.0,
+            ai_requested_p: requested,
+            kernel_output_p: actual,
+            active_governance: mode,
+            legal_justification: Some(citation),
+            is_authenticated: false,
+            state_transition: false,
         }
     }
 }
@@ -67,23 +87,44 @@ impl fmt::Display for SovereignTrace {
 
 /// Builder for SovereignTrace (fluent API for testing)
 pub struct TraceBuilder {
-    traces: Vec<SovereignTrace>,
+    tick: u64,
+    governance: GovernanceMode,
+    legal_citation: LegalCitation,
 }
 
 impl TraceBuilder {
-    pub fn new() -> Self {
+    pub fn new(tick: u64) -> Self {
         Self {
-            traces: Vec::new(),
+            tick,
+            governance: GovernanceMode::Normal,
+            legal_citation: LegalCitation::default(),
         }
     }
 
-    pub fn add(mut self, trace: SovereignTrace) -> Self {
-        self.traces.push(trace);
+    pub fn governance(mut self, mode: GovernanceMode) -> Self {
+        self.governance = mode;
         self
     }
 
-    pub fn build(self) -> Vec<SovereignTrace> {
-        self.traces
+    pub fn build(self) -> SovereignTrace {
+        SovereignTrace {
+            tick: self.tick,
+            requested_setpoint: 0.0,
+            actual_setpoint: 0.0,
+            governance_mode: self.governance,
+            legal_citation: self.legal_citation.clone(),
+            timestamp_ms: 0,
+            timestamp_us: 0,
+            grid_sigma: 0,
+            ambient_temp: 0.0,
+            inverter_current: 0.0,
+            ai_requested_p: 0.0,
+            kernel_output_p: 0.0,
+            active_governance: self.governance,
+            legal_justification: Some(self.legal_citation),
+            is_authenticated: false,
+            state_transition: false,
+        }
     }
 }
 

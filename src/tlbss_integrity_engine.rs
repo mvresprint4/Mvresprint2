@@ -2,8 +2,42 @@
 
 use crate::failure_axis::{FailureAxis, SystemHalt};
 use crate::tlbss_types::SubstrateNode;
-use crate::tlbss_integrity_engine::{TriEntityState, PlantClass, ResonanceProfile};
 use std::collections::VecDeque;
+
+#[derive(Debug, Clone, Copy)]
+pub struct TriEntityState {
+    pub entity_a: u32,
+    pub entity_b: u32,
+    pub entity_c: u32,
+}
+
+impl TriEntityState {
+    pub fn new(a: u32, b: u32, c: u32) -> Result<Self, SystemHalt> {
+        Ok(TriEntityState {
+            entity_a: a,
+            entity_b: b,
+            entity_c: c,
+        })
+    }
+
+    pub fn as_array(&self) -> [u8; 3] {
+        [
+            (self.entity_a & 0xFF) as u8,
+            (self.entity_b & 0xFF) as u8,
+            (self.entity_c & 0xFF) as u8,
+        ]
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PlantClass {
+    pub class_id: u8,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ResonanceProfile {
+    pub profile_id: u8,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct DimensionalTransitionAlert {

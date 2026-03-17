@@ -65,6 +65,7 @@ pub enum GovernanceMode {
     Degraded,
     EmergencyRateLimit,
     CompleteVeto,
+    PassThrough,
 }
 
 impl fmt::Display for GovernanceMode {
@@ -74,6 +75,7 @@ impl fmt::Display for GovernanceMode {
             GovernanceMode::Degraded => write!(f, "Degraded"),
             GovernanceMode::EmergencyRateLimit => write!(f, "EmergencyRateLimit"),
             GovernanceMode::CompleteVeto => write!(f, "CompleteVeto"),
+            GovernanceMode::PassThrough => write!(f, "PassThrough"),
         }
     }
 }
