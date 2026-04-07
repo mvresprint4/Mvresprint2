@@ -20,6 +20,8 @@
 use crate::failure_axis::{FailureAxis, SystemHalt};
 use sha2::{Digest, Sha256};
 use std::env;
+#[cfg(feature = "tpm")]
+use tss_esapi::{Context, Tcti};
 
 /// Immutable per-tick audit record for the sovereign substrate.
 #[derive(Debug, Clone, PartialEq)]
@@ -179,14 +181,14 @@ pub struct SovereignKernelConfig {
 
 #[derive(Debug)]
 pub struct SovereignKernel {
-    config: SovereignKernelConfig,
+    _config: SovereignKernelConfig,
     signer: AnyTpmSigner,
     last_record_hash: Vec<u8>,
 }
 
 impl SovereignKernel {
     pub fn new(signer: AnyTpmSigner, config: SovereignKernelConfig) -> Self {
-        Self { config, signer, last_record_hash: vec![0; 32] }
+        Self { _config: config, signer, last_record_hash: vec![0; 32] }
     }
 
     /// Execute foreign logic inside the sovereign runtime

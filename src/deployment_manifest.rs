@@ -28,8 +28,8 @@
 
 
 /// Production manifest version - must match JSON
-const MANIFEST_VERSION: &str = "1.0.0-PROD";
-const MANIFEST_DATE: &str = "2026-03-02";
+pub const MANIFEST_VERSION: &str = "1.0.0-PROD";
+pub const MANIFEST_DATE: &str = "2026-03-02";
 
 /// Kernel safety invariants (hard-coded from manifest)
 #[derive(Debug, Clone, Copy)]

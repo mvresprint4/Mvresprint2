@@ -278,4 +278,22 @@ For pilot deployment inquiries, please reference the PILOT_BRIEF.md document.
 
 ---
 
-*This manual is for pilot evaluation only. Production deployment requires additional validation and certification.*
+*This manual is for pilot evaluation only. Production deployment requires additional validation and certification.*---
+
+## April 2026 Ubuntu WSL Addendum
+
+### Verified Environment
+
+- Ubuntu `24.04` on WSL2
+- `rustc 1.94.1`
+- `cargo 1.94.1`
+- Native dependencies: `build-essential`, `pkg-config`, `libssl-dev`
+
+### Recommended Verification Commands
+
+```bash
+cargo check --message-format short
+cargo run --bin sced_chain -- verify artifacts/sample_sced.csv
+cargo run --bin pilot_demo
+cargo run --bin dashboard
+```

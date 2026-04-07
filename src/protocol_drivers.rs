@@ -120,14 +120,14 @@ impl ProtocolDriver for C37p118Driver {
 
 impl ProtocolDriver for IccpTase2Driver {
     fn kind(&self) -> ProtocolKind {
-        ProtocolKind::ICCP_TASE2
+        ProtocolKind::IccpTase2
     }
     fn validate_endpoint(&self, endpoint: &DiscoveredEndpoint) -> bool {
         endpoint.port == 102
     }
     fn parse_telemetry(&self, payload: &[u8]) -> Result<ParsedTelemetry, SystemHalt> {
         Ok(ParsedTelemetry {
-            protocol: ProtocolKind::ICCP_TASE2,
+            protocol: ProtocolKind::IccpTase2,
             summary: format!("ICCP-TASE2 message: {} bytes", payload.len()),
         })
     }

@@ -57,7 +57,7 @@ pub struct RecordKey {
 pub struct VerifyError {
     pub code: VerifyCode,
     pub message: String,
-    pub record_key: Option<RecordKey>,
+    pub record_key: RecordKey,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -74,14 +74,14 @@ pub struct VerifierReport {
 fn numeric_field_names() -> Vec<String> {
     let mut names = Vec::with_capacity(48);
     for block in 1..=6 {
-        names.push(format!("price{}_urs", block));
-        names.push(format!("price{}_drs", block));
-        names.push(format!("price{}_rrspf", block));
-        names.push(format!("price{}_rrsuf", block));
-        names.push(format!("price{}_rrsff", block));
-        names.push(format!("price{}_ns", block));
-        names.push(format!("price{}_ecrs", block));
-        names.push(format!("quantity_mw{}", block));
+        names.push(format!("price{block}_urs"));
+        names.push(format!("price{block}_drs"));
+        names.push(format!("price{block}_rrspf"));
+        names.push(format!("price{block}_rrsuf"));
+        names.push(format!("price{block}_rrsff"));
+        names.push(format!("price{block}_ns"));
+        names.push(format!("price{block}_ecrs"));
+        names.push(format!("quantity_mw{block}"));
     }
     names
 }
@@ -120,7 +120,6 @@ impl ScedResourceOfferRecord {
     pub fn record_hash(&self) -> String {
         sha256_hex(&self.canonical_record_string())
     }
-
 }
 
 pub fn parse_csv<R: Read>(input: R) -> Result<Vec<ScedResourceOfferRecord>, ParseError> {
@@ -207,6 +206,8 @@ fn parse_bool(raw: &str) -> Result<bool, ParseError> {
     match raw.trim() {
         "true" => Ok(true),
         "false" => Ok(false),
+        "Y" | "y" => Ok(true),
+        "N" | "n" => Ok(false),
         _ => Err(ParseError::InvalidBoolean(raw.to_string())),
     }
 }
@@ -223,7 +224,9 @@ fn compare_records(a: &ScedResourceOfferRecord, b: &ScedResourceOfferRecord) -> 
         .then(a.offer_type.cmp(&b.offer_type))
 }
 
-pub fn build_hash_chain(mut records: Vec<ScedResourceOfferRecord>) -> Result<Vec<ChainedRecord>, ParseError> {
+pub fn build_hash_chain(
+    mut records: Vec<ScedResourceOfferRecord>,
+) -> Result<Vec<ChainedRecord>, ParseError> {
     sort_records(&mut records);
 
     let mut seen = HashSet::new();
@@ -278,7 +281,7 @@ pub fn verify_records(
                 errors.push(VerifyError {
                     code: VerifyCode::RecordCountMismatch,
                     message: format!("expected records_total={expected_count}, got 0"),
-                    record_key: None,
+                    record_key: unknown_key(),
                 });
             }
         }
@@ -288,7 +291,7 @@ pub fn verify_records(
                 errors.push(VerifyError {
                     code: VerifyCode::HashMismatch,
                     message: format!("expected final_chain_hash={expected_hash}, got 0"),
-                    record_key: None,
+                    record_key: unknown_key(),
                 });
             }
         }
@@ -296,7 +299,7 @@ pub fn verify_records(
         return VerifierReport {
             status,
             records_total: 0,
-            records_verified: if errors.is_empty() { 0 } else { 0 },
+            records_verified: 0,
             final_chain_hash: "0".to_string(),
             expected_final_chain_hash: expected_final_chain_hash.map(|s| s.to_string()),
             mismatch_index: None,
@@ -311,11 +314,11 @@ pub fn verify_records(
                 status: "FAIL".to_string(),
                 records_total,
                 records_verified: 0,
-                final_chain_hash: "".to_string(),
+                final_chain_hash: String::new(),
                 expected_final_chain_hash: expected_final_chain_hash.map(|s| s.to_string()),
                 mismatch_index: None,
                 errors: vec![map_parse_error(err)],
-            }
+            };
         }
     };
 
@@ -327,12 +330,11 @@ pub fn verify_records(
             errors.push(VerifyError {
                 code: VerifyCode::RecordCountMismatch,
                 message: format!("expected records_total={expected_count}, got {}", chain.len()),
-                record_key: None,
+                record_key: unknown_key(),
             });
         }
     }
 
-    // Explicit chain continuity validation (0-based index after deterministic sort)
     let mut prev = "0".to_string();
     for (idx, item) in chain.iter().enumerate() {
         let expected_link = sha256_hex(&format!("{}|{}", prev, item.record_hash));
@@ -341,12 +343,12 @@ pub fn verify_records(
             errors.push(VerifyError {
                 code: VerifyCode::ChainContinuityBreak,
                 message: "chain continuity broken".to_string(),
-                record_key: Some(RecordKey {
+                record_key: RecordKey {
                     scd_timestamp: item.key.0.clone(),
                     repeat_hour_flag: item.key.1,
                     resource_name: item.key.2.clone(),
                     offer_type: item.key.3.clone(),
-                }),
+                },
             });
             break;
         }
@@ -364,13 +366,18 @@ pub fn verify_records(
                 mismatch_index = Some(chain.len().saturating_sub(1));
                 errors.push(VerifyError {
                     code: VerifyCode::HashMismatch,
-                    message: format!("expected final_chain_hash={expected_hash}, got {final_chain_hash}"),
-                    record_key: chain.last().map(|last| RecordKey {
-                        scd_timestamp: last.key.0.clone(),
-                        repeat_hour_flag: last.key.1,
-                        resource_name: last.key.2.clone(),
-                        offer_type: last.key.3.clone(),
-                    }),
+                    message: format!(
+                        "expected final_chain_hash={expected_hash}, got {final_chain_hash}"
+                    ),
+                    record_key: chain
+                        .last()
+                        .map(|last| RecordKey {
+                            scd_timestamp: last.key.0.clone(),
+                            repeat_hour_flag: last.key.1,
+                            resource_name: last.key.2.clone(),
+                            offer_type: last.key.3.clone(),
+                        })
+                        .unwrap_or_else(unknown_key),
                 });
             }
         }
@@ -403,11 +410,11 @@ pub fn verify_csv<R: Read>(
                 status: "FAIL".to_string(),
                 records_total: 0,
                 records_verified: 0,
-                final_chain_hash: "".to_string(),
+                final_chain_hash: String::new(),
                 expected_final_chain_hash: expected_final_chain_hash.map(|s| s.to_string()),
                 mismatch_index: None,
                 errors: vec![map_parse_error(err)],
-            }
+            };
         }
     };
     verify_records(parsed, expected_final_chain_hash, expected_records_total)
@@ -418,38 +425,47 @@ fn map_parse_error(err: ParseError) -> VerifyError {
         ParseError::CsvSchemaMismatch => VerifyError {
             code: VerifyCode::CsvSchemaMismatch,
             message: "CSV schema mismatch".to_string(),
-            record_key: None,
+            record_key: unknown_key(),
         },
         ParseError::MissingValue(field) => VerifyError {
             code: VerifyCode::CsvMalformed,
             message: format!("missing value for field '{field}'"),
-            record_key: None,
+            record_key: unknown_key(),
         },
         ParseError::InvalidBoolean(v) => VerifyError {
             code: VerifyCode::InvalidBoolean,
             message: format!("invalid boolean '{v}'"),
-            record_key: None,
+            record_key: unknown_key(),
         },
         ParseError::InvalidNumeric(field, v) => VerifyError {
             code: VerifyCode::InvalidNumeric,
             message: format!("invalid numeric field '{field}' with value '{v}'"),
-            record_key: None,
+            record_key: unknown_key(),
         },
         ParseError::DuplicatePrimaryKey(ts, rep, res, typ) => VerifyError {
             code: VerifyCode::DuplicatePk,
             message: "duplicate primary key detected".to_string(),
-            record_key: Some(RecordKey {
+            record_key: RecordKey {
                 scd_timestamp: ts,
                 repeat_hour_flag: rep,
                 resource_name: res,
                 offer_type: typ,
-            }),
+            },
         },
         ParseError::MalformedCsv(msg) => VerifyError {
             code: VerifyCode::CsvMalformed,
             message: msg,
-            record_key: None,
+            record_key: unknown_key(),
         },
+    }
+}
+
+fn unknown_key() -> RecordKey {
+    RecordKey {
+        scd_timestamp: String::new(),
+        repeat_hour_flag: false,
+        resource_name: String::new(),
+        offer_type: String::new(),
     }
 }
 
@@ -463,7 +479,13 @@ fn sha256_hex(input: &str) -> String {
 mod tests {
     use super::*;
 
-    fn mk_record(ts: &str, repeat: bool, resource: &str, offer: &str, first: &str) -> ScedResourceOfferRecord {
+    fn mk_record(
+        ts: &str,
+        repeat: bool,
+        resource: &str,
+        offer: &str,
+        first: &str,
+    ) -> ScedResourceOfferRecord {
         let mut fields = std::array::from_fn::<_, 48, _>(|_| "0.000000".to_string());
         fields[0] = first.to_string();
         ScedResourceOfferRecord {
@@ -477,7 +499,13 @@ mod tests {
 
     #[test]
     fn canonical_order_is_fixed() {
-        let r = mk_record("2026-01-21T23:55:18", false, "7RNCHSLR_UNIT1", "OFFNS", "186.140000");
+        let r = mk_record(
+            "2026-01-21T23:55:18",
+            false,
+            "7RNCHSLR_UNIT1",
+            "OFFNS",
+            "186.140000",
+        );
         let serialized = r.canonical_record_string();
         assert!(serialized.starts_with("2026-01-21T23:55:18|false|7RNCHSLR_UNIT1|186.140000|"));
         assert!(serialized.ends_with("|OFFNS"));

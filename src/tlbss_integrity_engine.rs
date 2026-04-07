@@ -18,8 +18,6 @@
 #![deny(unsafe_code)]
 
 use crate::failure_axis::SystemHalt;
-use std::collections::VecDeque;
-
 #[derive(Debug, Clone, Copy)]
 pub struct TriEntityState {
     pub entity_a: u32,
@@ -102,15 +100,15 @@ impl Default for TlbssConfig {
 }
 
 pub struct TlbssIntegrityEngine {
-    config: TlbssConfig,
-    plant_class: PlantClass,
+    _config: TlbssConfig,
+    _plant_class: PlantClass,
     current_state: TriEntityState,
     current_tick: u64,
 }
 
 impl TlbssIntegrityEngine {
     pub fn new(plant_class: PlantClass, initial_state: TriEntityState, config: TlbssConfig) -> Self {
-        Self { config, plant_class, current_state: initial_state, current_tick: 0 }
+        Self { _config: config, _plant_class: plant_class, current_state: initial_state, current_tick: 0 }
     }
 
     pub fn tick(&mut self, external_signals: [u8; 3]) -> Result<TlbssTickRecord, SystemHalt> {
@@ -139,22 +137,6 @@ impl TlbssIntegrityEngine {
             dimensional_transition: None,
         })
     }
-}
-
-#[inline]
-fn hist_push(register: &mut VecDeque<u8>, v: u8) {
-    register.push_back(v);
-}
-
-#[inline]
-fn coherence(_register: &VecDeque<u8>) -> f32 {
-    0.95
-}
-
-fn hamming(a: [u8; 3], b: [u8; 3]) -> u8 {
-    (a[0] ^ b[0]).count_ones() as u8
-        + (a[1] ^ b[1]).count_ones() as u8
-        + (a[2] ^ b[2]).count_ones() as u8
 }
 
 #[cfg(test)]

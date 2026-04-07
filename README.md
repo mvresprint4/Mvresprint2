@@ -353,3 +353,78 @@ cargo run --bin tlbss_grid_stability
 ## License
 
 [License information here]
+## Verified Ubuntu Development Path
+As of April 6, 2026, the repository has been brought up on Ubuntu-24.04 under WSL with the Rust toolchain installed and the workspace checking cleanly.
+### Verified Toolchain
+- ustc 1.94.1
+- cargo 1.94.1
+- Ubuntu packages: uild-essential, pkg-config, libssl-dev
+### Setup Commands
+`ash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source ~/.cargo/env
+sudo apt-get update
+sudo apt-get install -y build-essential pkg-config libssl-dev
+`
+### Verified Build Command
+`ash
+cargo check --message-format short
+`
+cargo check with the default JSON diagnostic output may trigger a Rust diagnostic-renderer panic on this host, so --message-format short is the documented verification path for this environment.
+### Useful Binary Commands
+`ash
+cargo run --bin sced_chain -- verify artifacts/sample_sced.csv
+cargo run --bin pilot_demo
+cargo run --bin dashboard
+`
+"@
+Add-Content -Path 'C:\obienova\M.V.R.ESPRINT1\OPERATIONAL_MANUAL.md' -Value @"
+---
+## April 2026 Ubuntu WSL Addendum
+### Verified Environment
+- Ubuntu 24.04 on WSL2
+- ustc 1.94.1
+- cargo 1.94.1
+- Native dependencies: uild-essential, pkg-config, libssl-dev
+### Recommended Verification Commands
+`ash
+cargo check --message-format short
+cargo run --bin sced_chain -- verify artifacts/sample_sced.csv
+cargo run --bin pilot_demo
+cargo run --bin dashboard
+`
+### WSL Recovery
+If Ubuntu stops responding after a reboot or interrupted Cargo run:
+`powershell
+wsl --shutdown
+wsl -d Ubuntu-24.04
+`
+If Cargo leaves a stale build lock after interruption:
+`powershell
+Remove-Item -LiteralPath C:\obienova\M.V.R.ESPRINT1\target\debug\.cargo-lock -Force
+`
+"@
+Add-Content -Path 'C:\obienova\M.V.R.ESPRINT1\TECHNICAL_SPECIFICATIONS.md' -Value @"
+---
+## April 2026 Build Verification Addendum
+### Verified Linux Toolchain
+- Distribution: Ubuntu 24.04 under WSL2
+- Rust: ustc 1.94.1
+- Cargo: cargo 1.94.1
+- Native packages: uild-essential, pkg-config, libssl-dev
+### Verified Workspace Check
+`ash
+cargo check --message-format short
+`
+This short-format check is the documented verification path for this environment because the default JSON diagnostic path can trigger a Rust diagnostic-renderer panic even when the code is otherwise valid.
+### Binary Entry Points
+- sced_chain: deterministic SCED CSV normalization and hash-chain verification
+- pilot_demo: sample attestation generation and verifier handoff
+- dashboard: Axum-based demo UI served on port 3000
+"@
+Add-Content -Path 'C:\obienova\M.V.R.ESPRINT1\docs\DETERMINISTIC_IMPLEMENTATION_CHECKLIST.md' -Value @"
+## April 2026 Status Update
+- [x] Ubuntu WSL Rust toolchain installed (ustc 1.94.1, cargo 1.94.1)
+- [x] Native Linux build dependencies installed (uild-essential, pkg-config, libssl-dev)
+- [x] cargo check --message-format short passes on Ubuntu 24.04 WSL
+- [ ] cargo test --lib still pending in this verification pass

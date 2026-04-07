@@ -84,3 +84,7 @@ evidence/
 - Keep every claim tied to an artifact.
 - Prefer reproducible command logs over screenshots.
 - Present controls in reviewer language first, implementation details second.
+## April 2026 Evidence Update
+- [x] Ubuntu 24.04 WSL development environment documented with required native packages
+- [x] Workspace build verification command documented as cargo check --message-format short
+- [ ] Release build and binary smoke test evidence still need a clean post-restart WSL run

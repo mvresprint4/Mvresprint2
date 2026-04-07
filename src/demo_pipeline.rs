@@ -14,7 +14,7 @@ use crate::{
 use std::time::Instant;
 
 /// L7 Event Types - Map to regulatory emergency actions
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum EventType {
     /// Resource insufficiency → RUC / operator commit
     RUCRequired,
@@ -29,7 +29,7 @@ pub enum EventType {
 }
 
 /// Market snapshot for replay scenarios
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct MarketSnapshot {
     pub load_mw: f64,
     pub generation_mw: f64,
@@ -89,7 +89,7 @@ impl MarketSnapshot {
 }
 
 /// Complete demo result - shows full pipeline execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct DemoResult {
     pub admissible: bool,
     pub violations: ViolationVector,

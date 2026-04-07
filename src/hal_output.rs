@@ -19,7 +19,6 @@
 
 use crate::failure_axis::SystemHalt;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const DEFAULT_PACKET_BYTES: usize = 32;
 
@@ -65,16 +64,16 @@ impl OutputHalPolicy {
 }
 
 pub struct DeterministicOutputHal {
-    selected_interface: String,
-    policy: OutputHalPolicy,
+    _selected_interface: String,
+    _policy: OutputHalPolicy,
 }
 
 impl DeterministicOutputHal {
     pub fn from_env() -> Result<Self, SystemHalt> {
         let policy = OutputHalPolicy::from_env();
         Ok(Self {
-            selected_interface: "sim".to_string(),
-            policy,
+            _selected_interface: "sim".to_string(),
+            _policy: policy,
         })
     }
 
@@ -106,13 +105,6 @@ impl DeterministicOutputHal {
 
 fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
-}
-
-fn now_us() -> Result<u64, SystemHalt> {
-    Ok(SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_micros() as u64)
 }
 
 #[cfg(test)]

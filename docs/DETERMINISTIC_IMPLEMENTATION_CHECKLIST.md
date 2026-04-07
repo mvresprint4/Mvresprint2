@@ -51,3 +51,10 @@ Execution checklist for completing deterministic tri-faction integration in this
 - [ ] `cargo test --lib` pass (blocked in this host: missing `link.exe`)
 - [ ] deterministic replay consistency check (same input, same final hash, repeated)
 - [ ] formal status directive updated with latest evidence
+
+## April 2026 Status Update
+
+- [x] Ubuntu WSL Rust toolchain installed (ustc 1.94.1, cargo 1.94.1)
+- [x] Native Linux build dependencies installed (uild-essential, pkg-config, libssl-dev)
+- [x] cargo check --message-format short passes on Ubuntu 24.04 WSL
+- [ ] cargo test --lib still pending in this verification pass

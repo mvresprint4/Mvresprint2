@@ -1,17 +1,11 @@
-// Copyright © 2026 OBINNA JAMES EJIOFOR
-// All Rights Reserved.
-//
-// TLBSS Demo CLI Tool
-// Command-line interface for running the complete demo pipeline
-
-use m_v_r_esprint1::demo_pipeline::{run_full_demo, print_demo_pretty, MarketSnapshot};
+use m_v_r_esprint1::demo_pipeline::{print_demo_pretty, run_full_demo, MarketSnapshot};
 use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        println!("🚀 TLBSS Demo Pipeline");
+        println!("TLBSS Demo Pipeline");
         println!("Usage: {} <scenario>", args[0]);
         println!();
         println!("Available scenarios:");
@@ -34,14 +28,14 @@ fn main() {
         "collapse" => run_single_scenario("System Collapse", MarketSnapshot::collapse_case()),
         "all" => run_all_scenarios(),
         _ => {
-            println!("❌ Unknown scenario: {}", scenario);
+            println!("Unknown scenario: {}", scenario);
             println!("Run with no arguments to see available scenarios.");
         }
     }
 }
 
 fn run_single_scenario(name: &str, snapshot: MarketSnapshot) {
-    println!("🚀 TLBSS DEMO PIPELINE");
+    println!("TLBSS DEMO PIPELINE");
     println!("Scenario: {}", name);
     println!();
 
@@ -50,7 +44,7 @@ fn run_single_scenario(name: &str, snapshot: MarketSnapshot) {
 }
 
 fn run_all_scenarios() {
-    println!("🚀 TLBSS DEMO PIPELINE - ALL SCENARIOS");
+    println!("TLBSS DEMO PIPELINE - ALL SCENARIOS");
     println!();
 
     let scenarios = vec![
@@ -68,4 +62,3 @@ fn run_all_scenarios() {
         println!();
     }
 }
-<parameter name="filePath">/workspaces/M.V.R.ESPRINT1/src/bin/demo.rs

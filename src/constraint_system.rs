@@ -75,7 +75,7 @@ impl PowerState {
 }
 
 /// Violation vector - pure diagnostic, no mutation
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ViolationVector {
     pub ramp_up: f64,
     pub ramp_down: f64,

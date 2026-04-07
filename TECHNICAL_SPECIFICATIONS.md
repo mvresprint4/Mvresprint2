@@ -349,3 +349,19 @@ fn verify_signature(record: &AttestationRecord) -> Result<(), String>
 ---
 
 *This specification document is for technical evaluation. Implementation details may evolve based on pilot feedback.*
+---
+
+## April 2026 Build Verification Addendum
+
+### Verified Linux Toolchain
+
+- Distribution: Ubuntu 24.04 under WSL2
+- Rust: `rustc 1.94.1`
+- Cargo: `cargo 1.94.1`
+- Native packages: `build-essential`, `pkg-config`, `libssl-dev`
+
+### Verified Workspace Check
+
+```bash
+cargo check --message-format short
+```
