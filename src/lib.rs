@@ -48,6 +48,7 @@ pub mod operator_interface;
 pub mod protocol_drivers;
 pub mod recovery;
 pub mod regulatory_policy;
+pub mod reliability_controls;
 pub mod scheduler;
 pub mod simulation_harness_core;
 pub mod sovereign_kernel;

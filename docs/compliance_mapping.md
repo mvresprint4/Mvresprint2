@@ -49,3 +49,11 @@ Assumptions version: `2026-04-07.v1`
 4. Any transition to assisted-control authority requires a separate governance and validation gate.
 5. Control-family mappings are obligation framing aids and must be validated by formal compliance/legal review before submission.
 
+## 6) Sprint Priority Enforcement (April 2026)
+
+| Standard | Priority Control | Deterministic Enforcement Path | Violation Action |
+|---|---|---|---|
+| BAL-001-2 | ACE and frequency response with constant B-factor | `src/reliability_controls.rs` (`compute_ace`, `evaluate_bal001`, `validate_constant_b_factor`) | `ErrBal001` |
+| PRC-001 / PRC-024 | UFRT and ride-through envelope | `src/reliability_controls.rs` (`prc001_ufrt_trip_required`, `prc024_enforce_envelope`) | `Err003` / `Err004` |
+| FAC-008-3 | Thermal SOL normal/emergency enforcement | `src/reliability_controls.rs` (`evaluate_fac008`) | `ErrFac008` |
+| CIP-007-6 / CIP-011-2 | Default-deny ports/services and topology integrity | `src/reliability_controls.rs` (`enforce_cip007`, `enforce_cip011_topology_integrity`) | `HaltCip001` |
