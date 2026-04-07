@@ -55,7 +55,7 @@ Legend: `🔵✓` = completed and evidenced in-repo as of April 7, 2026.
 ## 7) Pilot and Submission Artifacts
 
 - [x] 🔵✓ Pilot objective statement (what success looks like)
-- [ ] Test matrix for normal/degraded/emergency scenarios
+- [x] 🔵✓ Test matrix for normal/degraded/emergency scenarios (`docs/PILOT_TEST_MATRIX.md`)
 - [x] 🔵✓ Sample SovereignTrace bundle with verification steps
 - [ ] Executive summary for non-technical reviewers
 - [ ] Technical appendix with reproducible commands
