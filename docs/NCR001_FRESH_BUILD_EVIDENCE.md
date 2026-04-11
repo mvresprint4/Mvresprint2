@@ -1,6 +1,6 @@
 # NCR-001 Fresh Build Evidence
 
-Date: April 8, 2026  
+Date: April 11, 2026  
 Scope: clean release build evidence and binary hash capture for compliance/licensing bundle.
 
 ## Build Evidence
