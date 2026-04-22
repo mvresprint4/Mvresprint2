@@ -18,6 +18,8 @@
 #![deny(unsafe_code)]
 
 use crate::kernel::KernelAuthority;
+use crate::phase_control::PhaseControlGate;
+use crate::failure_axis::SystemHalt;
 
 /// Simplified representation of an active/reactive power command issued by the
 /// upstream optimiser or AI.  The timestamp field allows the kernel to detect
@@ -124,4 +126,89 @@ pub fn govern_setpoint(
     };
     
     (clamped_q, authority)
+}
+
+/// Assisted-control wrapper used for Phase 3 operation.
+///
+/// This path requires explicit authorization and clamps the incoming setpoint
+/// to a narrow phase scope before applying existing deterministic guardrails.
+pub fn govern_setpoint_phase3(
+    desired: Setpoint,
+    ramp_limit: f64,
+    physical_max: f64,
+    v_min: f64,
+    v_max: f64,
+    gate: &PhaseControlGate,
+    operator_ack_token: Option<&str>,
+) -> Result<(Setpoint, KernelAuthority), SystemHalt> {
+    gate.ensure_assisted_control_authorized(operator_ack_token)?;
+
+    let scoped = gate.clamp_to_assisted_scope(desired);
+    Ok(govern_setpoint(scoped, ramp_limit, physical_max, v_min, v_max))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::phase_control::{AssistedControlScope, DeploymentPhase};
+
+    #[test]
+    fn phase3_governor_requires_ack() {
+        let gate = PhaseControlGate {
+            phase: DeploymentPhase::Phase3AssistedControl,
+            scope: AssistedControlScope {
+                require_operator_ack: true,
+                ..AssistedControlScope::default()
+            },
+        };
+
+        let result = govern_setpoint_phase3(
+            Setpoint { p: 5.0, q: 1.0, ts: 1 },
+            1.0,
+            50.0,
+            0.95,
+            1.05,
+            &gate,
+            None,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn phase3_governor_applies_phase_scope_before_kernel_limits() {
+        let gate = PhaseControlGate {
+            phase: DeploymentPhase::Phase3AssistedControl,
+            scope: AssistedControlScope {
+                max_abs_p_mw: 8.0,
+                max_abs_q_mvar: 3.0,
+                require_operator_ack: false,
+            },
+        };
+
+        let (actual, authority) = govern_setpoint_phase3(
+            Setpoint {
+                p: 30.0,
+                q: -8.0,
+                ts: 10,
+            },
+            1.0,
+            50.0,
+            0.95,
+            1.05,
+            &gate,
+            Some("ack"),
+        )
+        .expect("phase3 authorization should pass");
+
+        assert_eq!(
+            actual,
+            Setpoint {
+                p: 8.0,
+                q: -3.0,
+                ts: 10,
+            }
+        );
+        assert_eq!(authority, KernelAuthority::PassThrough);
+    }
 }

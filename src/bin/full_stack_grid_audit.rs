@@ -1,98 +1,141 @@
 // Copyright (c) 2026 OBINNA JAMES EJIOFOR
 // All Rights Reserved.
 //
-// This file is part of the M.V.R.ESPRINT1 Sovereign Execution System,
-// including TLBSS geometry, the Universal Execution Layer, the
-// Deterministic IR, Rust Codegen Pipeline, SovereignBus, and the
-// Cryptographic Audit Chain.
-//
-// No part of this file, its algorithms, structures, or designs may be
-// copied, reproduced, modified, distributed, published, sublicensed,
-// reverse-engineered, or used to create derivative works without the
-// express written permission of OBINNA JAMES EJIOFOR.
-//
-// This software contains proprietary trade secrets and confidential
-// intellectual property. Unauthorized use is strictly prohibited.
-use m_v_r_esprint1::economics::shadow_prices::{
-    build_shadow_price_chain, parse_proxy_snapshot_csv, ShadowPriceChainRecord,
+// This file is part of the M.V.R.ESPRINT1 Sovereign Execution System.
+
+use m_v_r_esprint1::sced_offer_chain::{CanonicalTruthPackage, VerifierReport};
+use m_v_r_esprint1::sovereign_diagnostic::{
+    default_simulation_signing_key, emit_signed_diagnostic,
 };
-use m_v_r_esprint1::topology::ybus::{parse_sparse_ybus_csv, ybus_decision_hash};
+use m_v_r_esprint1::sovereign_trace::seal_verified_truth_commit;
+use base64::Engine;
 use serde::Serialize;
-use std::env;
-use std::fs::File;
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::io::Write;
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Serialize)]
-struct FullStackAuditArtifact {
-    ri04_decision_hash_hex: String,
-    shadow_records_total: usize,
-    shadow_final_chain_hash_hex: String,
-    shadow_chain_records: Vec<ShadowPriceChainRecord>,
+struct AuditCommitEntry {
+    committed_at_unix_ms: u128,
+    verifier_status: String,
+    final_chain_hash: String,
+    records_total: usize,
+    schema_version: String,
+    hash_spec_version: String,
+    verifier_mismatch_index: Option<usize>,
+    verifier_errors_total: usize,
+    sovereign_seal_hash: String,
+    sovereign_seal_signature: String,
+    sovereign_seal_payload: String,
+    sda_dtc: String,
+    sda_diagnostic_b64: String,
+    sda_artifact_path: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 5 {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 3 {
         return Err(
-            "Usage: cargo run --bin full_stack_grid_audit -- <shadow_proxy_csv> (--ri04-hash <hex32> | --ri04-ybus-csv <ybus.csv>) [output_json]"
+            "Usage: cargo run --bin full_stack_grid_audit -- <canonical_truth.json> <verifier_report.json> [audit_log.jsonl]"
                 .into(),
         );
     }
 
-    let shadow_path = &args[1];
-    let (ri04_hash, next_idx) = match args.get(2).map(String::as_str) {
-        Some("--ri04-hash") => {
-            let hex = args.get(3).ok_or("missing value for --ri04-hash")?;
-            (decode_hash_hex(hex)?, 4usize)
-        }
-        Some("--ri04-ybus-csv") => {
-            let ybus_path = args.get(3).ok_or("missing value for --ri04-ybus-csv")?;
-            let file = File::open(ybus_path)?;
-            let ybus = parse_sparse_ybus_csv(file).map_err(|e| format!("{e:?}"))?;
-            (ybus_decision_hash(&ybus), 4usize)
-        }
-        _ => {
-            return Err("Expected --ri04-hash or --ri04-ybus-csv".into());
-        }
-    };
-
-    let output_json = args
-        .get(next_idx)
+    let truth_path = &args[1];
+    let report_path = &args[2];
+    let output_log = args
+        .get(3)
         .cloned()
-        .unwrap_or_else(|| "artifacts/full_stack_grid_audit.json".to_string());
+        .unwrap_or_else(|| "artifacts/verified_truth_audit_log.jsonl".to_string());
 
-    let shadow_file = File::open(shadow_path)?;
-    let shadow_rows = parse_proxy_snapshot_csv(shadow_file).map_err(|e| format!("{e:?}"))?;
-    let chain_report = build_shadow_price_chain(&shadow_rows, &ri04_hash);
+    let truth: CanonicalTruthPackage = serde_json::from_str(&fs::read_to_string(truth_path)?)?;
+    let report: VerifierReport = serde_json::from_str(&fs::read_to_string(report_path)?)?;
 
-    let artifact = FullStackAuditArtifact {
-        ri04_decision_hash_hex: chain_report.ri04_decision_hash_hex.clone(),
-        shadow_records_total: chain_report.records_total,
-        shadow_final_chain_hash_hex: chain_report.final_chain_hash_hex.clone(),
-        shadow_chain_records: chain_report.records.clone(),
-    };
+    if report.status != "PASS" {
+        return Err("Audit historian refusal: verifier status is not PASS".into());
+    }
+    if report.final_chain_hash != truth.final_chain_hash {
+        return Err("Audit historian refusal: verifier hash does not match canonical truth hash".into());
+    }
+    let seal = seal_verified_truth_commit(
+        &truth.final_chain_hash,
+        &report.status,
+        truth.metadata.records_total,
+        &truth.metadata.schema_version,
+        &truth.metadata.hash_spec_version,
+    )
+    .map_err(|e| format!("{:?}: {}", e.axis, e.message))?;
 
-    if let Some(parent) = std::path::Path::new(&output_json).parent() {
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+
+    let firmware_hash = hash_firmware_bytes()?;
+    let signing_key = default_simulation_signing_key();
+    let diagnostic = emit_signed_diagnostic(
+        &truth.canonical_payload_bytes,
+        firmware_hash,
+        &report,
+        &signing_key,
+    )
+    .map_err(|e| format!("SDA emit failed: {e}"))?;
+
+    let diagnostic_bytes = bincode::serialize(&diagnostic)?;
+    let sda_artifact_path = "artifacts/sovereign_diagnostic.bin".to_string();
+    if let Some(parent) = Path::new(&sda_artifact_path).parent() {
         if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)?;
         }
     }
-    std::fs::write(&output_json, serde_json::to_string_pretty(&artifact)?)?;
+    fs::write(&sda_artifact_path, &diagnostic_bytes)?;
+    let sda_b64 = base64::engine::general_purpose::STANDARD.encode(&diagnostic_bytes);
 
-    println!("RI04 decision hash: {}", chain_report.ri04_decision_hash_hex);
-    println!(
-        "RI18 shadow chain final hash: {} (records={})",
-        chain_report.final_chain_hash_hex, chain_report.records_total
-    );
-    println!("Artifact: {}", output_json);
+    let entry = AuditCommitEntry {
+        committed_at_unix_ms: now_ms,
+        verifier_status: report.status,
+        final_chain_hash: truth.final_chain_hash,
+        records_total: truth.metadata.records_total,
+        schema_version: truth.metadata.schema_version,
+        hash_spec_version: truth.metadata.hash_spec_version,
+        verifier_mismatch_index: report.mismatch_index,
+        verifier_errors_total: report.errors.len(),
+        sovereign_seal_hash: seal.seal_hash_hex,
+        sovereign_seal_signature: seal.seal_signature_hex,
+        sovereign_seal_payload: seal.payload,
+        sda_dtc: diagnostic.dtc.clone(),
+        sda_diagnostic_b64: sda_b64,
+        sda_artifact_path,
+    };
+
+    if let Some(parent) = std::path::Path::new(&output_log).parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&output_log)?;
+
+    let line = serde_json::to_string(&entry)?;
+    writeln!(file, "{}", line)?;
+
+    println!("Historian commit: PASS");
+    println!("Committed chain hash: {}", entry.final_chain_hash);
+    println!("SDA DTC: {}", entry.sda_dtc);
+    println!("Audit log: {}", output_log);
 
     Ok(())
 }
 
-fn decode_hash_hex(input: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let bytes = hex::decode(input)?;
-    if bytes.len() != 32 {
-        return Err("RI04 hash must be 32 bytes (64 hex chars)".into());
-    }
-    Ok(bytes)
+fn hash_firmware_bytes() -> Result<[u8; 32], Box<dyn std::error::Error>> {
+    let path = std::env::var("MVRE_FIRMWARE_PATH")
+        .unwrap_or_else(|_| "target/release/sced_chain".to_string());
+    let bytes = fs::read(&path)
+        .map_err(|e| format!("firmware hash read failed for '{}': {}", path, e))?;
+    Ok(Sha256::digest(&bytes).into())
 }
-

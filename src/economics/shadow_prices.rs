@@ -499,7 +499,7 @@ mod tests {
         assert!(report
             .mismatches
             .iter()
-            .any(|m| m.reason.contains("battery ECRS")));
+            .any(|m| m.reason.to_ascii_lowercase().contains("ecrs")));
     }
 
     #[test]

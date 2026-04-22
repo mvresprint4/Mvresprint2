@@ -18,8 +18,11 @@
 #![deny(unsafe_code)]
 
 use crate::audit_guardian::GuardianDecision;
+use crate::failure_axis::SystemHalt;
 use crate::hal_output::OutputCommand;
+use crate::sovereign_kernel::{validate_actor_command, ActorContext, CommandEnvelope, CommandType};
 use crate::tlbss_integrity_engine::TlbssTickRecord;
+use crate::trusted_time::TrustedTime;
 
 #[derive(Debug, Clone)]
 pub struct VisionsDecision {
@@ -43,6 +46,36 @@ impl VisionsCore {
         rec: &TlbssTickRecord,
         guardian: GuardianDecision,
     ) -> VisionsDecision {
+        self.route_with_authority(
+            tick,
+            rec,
+            guardian,
+            &ActorContext::system_runtime(),
+            CommandType::ExecuteForeignIr,
+        )
+        .expect("system runtime actor must always satisfy authority gate")
+    }
+
+    /// Authority-aware route path for manual overrides and externalized operator control.
+    /// Uses the same pre-execution gate as the sovereign kernel (RBAC + approval + MFA).
+    pub fn route_with_authority(
+        &self,
+        tick: u64,
+        rec: &TlbssTickRecord,
+        guardian: GuardianDecision,
+        actor: &ActorContext,
+        command_type: CommandType,
+    ) -> Result<VisionsDecision, SystemHalt> {
+        let authority_cmd = CommandEnvelope {
+            command_id: format!("visions-{}", tick),
+            command_type,
+            payload_hash: rec.state.as_array().to_vec(),
+            actor: actor.clone(),
+            timestamp: TrustedTime::default(),
+            command_signature: Vec::new(),
+        };
+        validate_actor_command(actor, &authority_cmd)?;
+
         let externalize_to_entity_c = rec.boundary_condition
             && rec.coherence_saturated
             && rec.dimensional_transition.is_some();
@@ -64,10 +97,10 @@ impl VisionsCore {
             }
         };
 
-        VisionsDecision {
+        Ok(VisionsDecision {
             allow_dispatch,
             externalize_to_entity_c,
             command,
-        }
+        })
     }
 }

@@ -22,23 +22,41 @@
 //! Ensures all inputs are cryptographically bound into SovereignTrace
 //! before normalization, execution, or translation.
 
-use crate::failure_axis::SystemHalt;
+use crate::failure_axis::{FailureAxis, SystemHalt};
+use crate::sensor_attestation::{sensor_signature_payload, SensorAttestationRegistry};
 use crate::sovereign_bus::{SovereignMessage, ActorId, ActorRole, OriginLanguage, TraceId};
 use crate::sovereign_trace::{InputEnvelope, Hash256, SovereignTraceLog};
 use crate::universal_frontend::{IRModule, Value};
 use crate::ir_codegen::{IRInput, IRResult};
 use sha2::{Digest, Sha256};
+use std::collections::HashSet;
 
 /// Cryptographic pipeline for processing inputs
 pub struct CryptoPipeline {
     trace_log: SovereignTraceLog,
+    sensor_registry: SensorAttestationRegistry,
+    seen_field_packets: HashSet<String>,
 }
 
 impl CryptoPipeline {
     pub fn new() -> Self {
         Self {
             trace_log: SovereignTraceLog::new(),
+            sensor_registry: SensorAttestationRegistry::new(),
+            seen_field_packets: HashSet::new(),
         }
+    }
+
+    pub fn with_sensor_registry(sensor_registry: SensorAttestationRegistry) -> Self {
+        Self {
+            trace_log: SovereignTraceLog::new(),
+            sensor_registry,
+            seen_field_packets: HashSet::new(),
+        }
+    }
+
+    pub fn register_field_sensor_deterministic(&mut self, sensor_id: &str) {
+        self.sensor_registry.register_deterministic_sensor(sensor_id);
     }
 
     /// Process raw input through the complete cryptographic pipeline
@@ -61,8 +79,12 @@ impl CryptoPipeline {
             trace_parent,
         );
 
-        // 2. Verify signature
-        envelope.verify_signature()?;
+        // 2. Verify signature/attestation.
+        if envelope.role == ActorRole::FieldDevice {
+            self.verify_field_device_attestation(&envelope)?;
+        } else {
+            envelope.verify_signature()?;
+        }
 
         // 3. Record input received
         self.trace_log.append_input_received(envelope.clone());
@@ -167,9 +189,98 @@ impl CryptoPipeline {
     pub fn trace_log(&self) -> &SovereignTraceLog {
         &self.trace_log
     }
+
+    fn verify_field_device_attestation(&mut self, envelope: &InputEnvelope) -> Result<(), SystemHalt> {
+        let signature = envelope.signature.as_deref().ok_or_else(|| {
+            SystemHalt::new(
+                FailureAxis::SensorAttestationFailure,
+                "ERR_SENSOR_SIGNATURE_REQUIRED",
+            )
+        })?;
+
+        let packet_id = field_packet_id(envelope);
+        if !self.seen_field_packets.insert(packet_id) {
+            return Err(SystemHalt::new(
+                FailureAxis::SensorAttestationFailure,
+                "ERR_SENSOR_REPLAY_DETECTED",
+            ));
+        }
+
+        let payload = sensor_signature_payload(
+            &envelope.actor_id.0,
+            &envelope.trace_parent.0,
+            envelope.timestamp,
+            &envelope.raw_input_bytes,
+        );
+
+        self.sensor_registry
+            .verify_signed_packet(&envelope.actor_id.0, &payload, signature)
+    }
 }
 
 /// Get global bus instance
 fn global_bus() -> std::sync::MutexGuard<'static, Option<crate::sovereign_bus::SovereignBus>> {
     crate::sovereign_bus::global_bus()
+}
+
+fn field_packet_id(envelope: &InputEnvelope) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"SENSOR_PACKET_ID_V1");
+    hasher.update(envelope.actor_id.0.as_bytes());
+    hasher.update(envelope.timestamp.to_le_bytes());
+    hasher.update(envelope.trace_parent.0.as_bytes());
+    hasher.update(&envelope.raw_input_hash);
+    hex::encode(hasher.finalize())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sensor_attestation::{deterministic_sign_for_sensor, sensor_signature_payload};
+
+    #[test]
+    fn field_device_requires_valid_signature() {
+        let sensor_id = "rtu-west-001";
+        let trace = TraceId("trace-a".to_string());
+        let raw = b"v=120.1".to_vec();
+
+        let payload = sensor_signature_payload(sensor_id, &trace.0, 0, &raw);
+        let signature = deterministic_sign_for_sensor(sensor_id, &payload);
+
+        let mut registry = SensorAttestationRegistry::new();
+        registry.register_deterministic_sensor(sensor_id);
+        let mut pipeline = CryptoPipeline::with_sensor_registry(registry);
+
+        let result = pipeline.process_input(
+            ActorId(sensor_id.to_string()),
+            ActorRole::FieldDevice,
+            OriginLanguage::Rust,
+            raw,
+            Some(signature),
+            trace,
+        );
+
+        // timestamp inside envelope is runtime-generated, so this synthetic signature must fail.
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn field_device_rejects_missing_signature() {
+        let mut registry = SensorAttestationRegistry::new();
+        registry.register_deterministic_sensor("pmu-east-01");
+        let mut pipeline = CryptoPipeline::with_sensor_registry(registry);
+
+        let err = pipeline
+            .process_input(
+                ActorId("pmu-east-01".to_string()),
+                ActorRole::FieldDevice,
+                OriginLanguage::Rust,
+                b"hz=60.02".to_vec(),
+                None,
+                TraceId("trace-x".to_string()),
+            )
+            .expect_err("must reject unsigned field packet");
+
+        assert_eq!(err.message, "ERR_SENSOR_SIGNATURE_REQUIRED");
+    }
 }

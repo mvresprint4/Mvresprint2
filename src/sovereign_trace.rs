@@ -32,6 +32,7 @@ pub mod streamer;
 use crate::failure_axis::{FailureAxis, SystemHalt};
 use crate::regulatory_policy::{GovernanceMode, LegalCitation};
 use crate::sovereign_bus::{SovereignMessage, ActorId, ActorRole, OriginLanguage, TraceId};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::fs::OpenOptions;
@@ -44,6 +45,42 @@ pub type Hash256 = [u8; 32];
 
 /// Digital signature type
 pub type Signature = Vec<u8>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifiedTruthSeal {
+    pub payload: String,
+    pub seal_hash_hex: String,
+    pub seal_signature_hex: String,
+}
+
+pub fn seal_verified_truth_commit(
+    final_chain_hash: &str,
+    verifier_status: &str,
+    records_total: usize,
+    schema_version: &str,
+    hash_spec_version: &str,
+) -> Result<VerifiedTruthSeal, SystemHalt> {
+    if verifier_status != "PASS" {
+        return Err(SystemHalt::new(
+            FailureAxis::InternalInvariantBreach,
+            "Cannot seal unverified canonical truth",
+        ));
+    }
+
+    let payload = format!(
+        "SDTQ|status={verifier_status}|records_total={records_total}|schema={schema_version}|hash_spec={hash_spec_version}|final_chain_hash={final_chain_hash}"
+    );
+    let seal_hash_hex = hex::encode(Sha256::digest(payload.as_bytes()));
+
+    let signature_material = format!("{}|{}", seal_hash_hex, "sovereign-trace-seal-v1");
+    let seal_signature_hex = hex::encode(Sha256::digest(signature_material.as_bytes()));
+
+    Ok(VerifiedTruthSeal {
+        payload,
+        seal_hash_hex,
+        seal_signature_hex,
+    })
+}
 
 /// Canonical structure for all inbound inputs
 #[derive(Debug, Clone)]

@@ -17,6 +17,8 @@
 
 #![deny(unsafe_code)]
 
+pub(crate) mod canonical_core;
+
 pub mod adversarial_harness;
 pub mod compliance;
 pub mod constraint_system;
@@ -53,9 +55,11 @@ pub mod recovery;
 pub mod regulatory_policy;
 pub mod reliability_controls;
 pub mod scheduler;
+pub mod sensor_attestation;
 pub mod simulation_harness_core;
 pub mod sovereign_kernel;
 pub mod sovereign_trace;
+pub mod sovereign_diagnostic;
 pub mod tlbss_integrity_engine;
 pub mod visions_core;
 
@@ -75,6 +79,8 @@ pub mod mora_ingestion;
 pub mod modeling_expectations_policy;
 pub mod topology;
 pub mod sced_offer_chain;
+pub mod sdtq_boundary;
 pub mod sprint1;
 pub mod mvre;
 pub mod guardian;
+pub mod phase_control;

@@ -111,6 +111,8 @@ pub struct ActorContext {
     pub is_automated: bool,
     pub trigger: TriggerType,
     pub approver_id: Option<String>,
+    #[serde(default)]
+    pub operator_ack_token: Option<String>,
 }
 
 impl ActorContext {
@@ -123,6 +125,7 @@ impl ActorContext {
             is_automated: true,
             trigger: TriggerType::Automated,
             approver_id: None,
+            operator_ack_token: None,
         }
     }
 }
@@ -504,6 +507,10 @@ pub fn command_requires_approval(command: &CommandType) -> bool {
     matches!(command, CommandType::ScedOverride | CommandType::EmergencyOverride)
 }
 
+pub fn command_requires_mfa_ack(command: &CommandType) -> bool {
+    matches!(command, CommandType::ScedOverride | CommandType::EmergencyOverride)
+}
+
 pub fn validate_actor_command(actor: &ActorContext, command: &CommandEnvelope) -> Result<(), SystemHalt> {
     if actor.operator_id.is_empty() {
         return Err(SystemHalt::new(
@@ -533,6 +540,30 @@ pub fn validate_actor_command(actor: &ActorContext, command: &CommandEnvelope) -
         ));
     }
 
+    if command_requires_mfa_ack(&command.command_type) && actor.trigger == TriggerType::Human {
+        if !matches!(actor.auth_method, AuthMethod::SmartCard | AuthMethod::Token) {
+            return Err(SystemHalt::new(
+                FailureAxis::AuthorityInversionAttempt,
+                "ERR_MFA_AUTH_METHOD_REQUIRED",
+            ));
+        }
+
+        let Some(token) = actor.operator_ack_token.as_deref() else {
+            return Err(SystemHalt::new(
+                FailureAxis::AuthorityInversionAttempt,
+                "ERR_MFA_ACK_REQUIRED",
+            ));
+        };
+
+        let expected = issue_operator_ack_token(actor, command);
+        if token != expected {
+            return Err(SystemHalt::new(
+                FailureAxis::AuthorityInversionAttempt,
+                "ERR_MFA_ACK_INVALID",
+            ));
+        }
+    }
+
     Ok(())
 }
 
@@ -549,6 +580,9 @@ pub fn build_command_payload(command: &CommandEnvelope) -> Vec<u8> {
     hasher.update((command.actor.trigger as u8).to_le_bytes());
     if let Some(approver) = &command.actor.approver_id {
         hasher.update(approver.as_bytes());
+    }
+    if let Some(token) = &command.actor.operator_ack_token {
+        hasher.update(token.as_bytes());
     }
     hasher.update(command.timestamp.wall_time_ns.to_le_bytes());
     hasher.update(command.timestamp.monotonic_ns.to_le_bytes());
@@ -573,6 +607,21 @@ pub fn build_artifact_payload(
 
 pub fn sign_payload_for_actor(actor: &ActorContext, payload: &[u8]) -> Vec<u8> {
     actor_signing_key(actor).sign(payload).to_bytes().to_vec()
+}
+
+pub fn issue_operator_ack_token(actor: &ActorContext, command: &CommandEnvelope) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"mvre-operator-ack-v1");
+    hasher.update(actor.operator_id.as_bytes());
+    hasher.update(actor.session_id.as_bytes());
+    hasher.update((actor.auth_method as u8).to_le_bytes());
+    hasher.update(command.command_id.as_bytes());
+    hasher.update((command.command_type as u8).to_le_bytes());
+    hasher.update(&command.payload_hash);
+    if let Some(approver) = &actor.approver_id {
+        hasher.update(approver.as_bytes());
+    }
+    hex::encode(hasher.finalize())
 }
 
 pub fn verify_actor_signature(actor: &ActorContext, payload: &[u8], signature: &[u8]) -> bool {
@@ -668,6 +717,15 @@ pub fn attestation_record_data(record: &AttestationRecord) -> Vec<u8> {
         &mut data,
         record.actor.approver_id.as_deref().unwrap_or("").as_bytes(),
     );
+    append_len_prefixed(
+        &mut data,
+        record
+            .actor
+            .operator_ack_token
+            .as_deref()
+            .unwrap_or("")
+            .as_bytes(),
+    );
 
     append_len_prefixed(&mut data, record.command.command_id.as_bytes());
     data.push(record.command.command_type as u8);
@@ -742,6 +800,7 @@ mod tests {
             is_automated: false,
             trigger: TriggerType::Human,
             approver_id: Some("shift_supervisor_03".to_string()),
+            operator_ack_token: Some("placeholder".to_string()),
         }
     }
 
@@ -758,6 +817,44 @@ mod tests {
 
         let err = validate_actor_command(&actor, &cmd).expect_err("must reject missing approval");
         assert_eq!(err.message, "ERR_APPROVAL_REQUIRED");
+    }
+
+    #[test]
+    fn human_override_requires_mfa_token() {
+        let actor = ActorContext {
+            operator_ack_token: None,
+            ..sample_actor()
+        };
+        let cmd = CommandEnvelope {
+            command_id: "cmd-override-1".to_string(),
+            command_type: CommandType::ScedOverride,
+            payload_hash: vec![9, 9, 9],
+            actor: actor.clone(),
+            timestamp: TrustedTime::default(),
+            command_signature: Vec::new(),
+        };
+
+        let err = validate_actor_command(&actor, &cmd).expect_err("must reject missing mfa token");
+        assert_eq!(err.message, "ERR_MFA_ACK_REQUIRED");
+    }
+
+    #[test]
+    fn valid_mfa_token_allows_human_override() {
+        let mut actor = sample_actor();
+        let mut cmd = CommandEnvelope {
+            command_id: "cmd-override-2".to_string(),
+            command_type: CommandType::ScedOverride,
+            payload_hash: vec![1, 2, 3, 4],
+            actor: actor.clone(),
+            timestamp: TrustedTime::default(),
+            command_signature: Vec::new(),
+        };
+
+        let token = issue_operator_ack_token(&actor, &cmd);
+        actor.operator_ack_token = Some(token.clone());
+        cmd.actor.operator_ack_token = Some(token);
+
+        validate_actor_command(&actor, &cmd).expect("mfa token should authorize override");
     }
 
     #[test]

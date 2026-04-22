@@ -23,6 +23,7 @@ pub enum FailureAxis {
     ExternalInjectionDetected,
     TimingDriftFailure,
     AuthorityInversionAttempt,
+    SensorAttestationFailure,
 
     // Additional axes introduced for audit/hardening
     Reference,
