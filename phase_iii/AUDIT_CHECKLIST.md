@@ -13,8 +13,8 @@ Provide a step-by-step list for an outside reviewer to validate the repositoryâ€
 - [ ] Read `phase_iii/PHASE_III_CHARTER.md`.
 - [ ] Read `phase_iii/OPEN_INVARIANTS.md`.
 - [ ] Read `phase_iii/EXIT_CRITERIA.md`.
-- [ ] Read `phase_iii/EVIDENCE_INDEX.md`.
-- [ ] Read `phase_iii/CLAIM_TRACEABILITY_MATRIX.md`.
+- [ ] Read `phase_ii/compliance/EVIDENCE_INDEX.md`.
+- [ ] Read `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md`.
 
 ## 3. Validate Claims
 - [ ] Confirm every claim in `README.md`, `OPERATIONAL_MANUAL.md`, `MERGE_PLAN.md`, and branch analysis docs is captured in `CLAIM_TRACEABILITY_MATRIX.md` or documented as unsupported.

@@ -3,8 +3,8 @@
 Minimal Phase III enforcement tool (dry-run by default).
 Usage: python3 tools/phase3_enforce/enforce.py --dry-run
 
-This script parses the `phase_iii/CLAIM_TRACEABILITY_MATRIX.md` and
-`phase_iii/EVIDENCE_INDEX.md` files for simple table rows and produces
+This script parses the `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md` and
+`phase_ii/compliance/EVIDENCE_INDEX.md` files for simple table rows and produces
 an `phase_iii/ENFORCEMENT_REPORT.md` summarizing link coverage.
 
 This is a lightweight prototype for the enforcement loop.

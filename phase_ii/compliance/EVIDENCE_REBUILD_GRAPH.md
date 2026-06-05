@@ -1,4 +1,4 @@
-# Phase III Evidence Rebuild Graph
+# Phase II Compliance Evidence Rebuild Graph
 
 ## Deterministic Reconstruction DAG
 
@@ -66,4 +66,4 @@ No downstream artifact may be generated without its upstream parents being fully
 
 1. **Strict Path Isolation:** No generation command may reference files outside repository boundaries.
 2. **No Ambient Storage Access:** Accessing network interfaces, ephemeral system directories, or user home directories during execution is forbidden.
-3. **Hash Verification:** Post-rebuild, generated files must be parsed and their hashes must match the entries defined inside `phase_iii/EVIDENCE_INDEX.md`.
+3. **Hash Verification:** Post-rebuild, generated files must be parsed and their hashes must match the entries defined inside `phase_ii/compliance/EVIDENCE_INDEX.md`.

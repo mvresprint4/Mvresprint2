@@ -32,8 +32,8 @@ The `README.md` and `OPERATIONAL_MANUAL.md` claim Phase III prediction payload s
 ### Actions
 - [ ] Inventory the exact `sced_chain` sample/validate outputs.
 - [ ] Create or locate sample payloads in `phase_ii/` or `phase_iii/`.
-- [ ] Add explicit evidence entries to `phase_iii/EVIDENCE_INDEX.md`.
-- [ ] Update `phase_iii/CLAIM_TRACEABILITY_MATRIX.md` to link the claim.
+- [ ] Add explicit evidence entries to `phase_ii/compliance/EVIDENCE_INDEX.md`.
+- [ ] Update `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md` to link the claim.
 
 ### Acceptance Criteria
 - [ ] Claim `Phase III prediction payload sampling and validation` transitions from `PENDING_EVIDENCE` to `VALIDATED`.
@@ -52,7 +52,7 @@ Runtime evidence artifacts are stored under `/tmp/...` which are transient and n
 ### Actions
 - [ ] Run `bash scripts/mirror_evidence.sh --source /tmp/phase_ii_repro/logs --dest phase_ii/evidence --confirm` to copy artifacts (when available).
 - [ ] Alternatively, document a reproducible path to regenerate these artifacts or confirm they're not needed.
-- [ ] Update `phase_iii/EVIDENCE_INDEX.md` to mark `/tmp/` artifacts as `ORPHANED` or update reproducibility status.
+- [ ] Update `phase_ii/compliance/EVIDENCE_INDEX.md` to mark `/tmp/` artifacts as `ORPHANED` or update reproducibility status.
 
 ### Acceptance Criteria
 - [ ] No `/tmp/` artifacts remain in `EVIDENCE_INDEX.md`, OR all are marked as reproducible with step-by-step instructions.
@@ -72,8 +72,8 @@ The claim `SCED offer-chain verification` references test vectors and scripts bu
 ### Actions
 - [ ] Verify that `test_vectors/` and `scripts/` contain the expected SCED verification artifacts.
 - [ ] Document the exact run command and expected output.
-- [ ] Add evidence entries to `phase_iii/EVIDENCE_INDEX.md` (e.g., sample run logs, test vector metadata).
-- [ ] Link the claim in `phase_iii/CLAIM_TRACEABILITY_MATRIX.md`.
+- [ ] Add evidence entries to `phase_ii/compliance/EVIDENCE_INDEX.md` (e.g., sample run logs, test vector metadata).
+- [ ] Link the claim in `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md`.
 
 ### Acceptance Criteria
 - [ ] Claim state transitions from `PENDING_EVIDENCE` to `VALIDATED`.

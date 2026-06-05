@@ -1,4 +1,4 @@
-# Phase III Invariant Resolution Matrix
+# Phase II Compliance Invariant Resolution Matrix
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Create a concise audit-facing summary that maps the highest-risk unresolved inva
 
 ## Observations
 
-- The highest-value gap is reproducible evidence. The audit framework already calls this out explicitly in `phase_iii/EVIDENCE_INDEX.md`, `phase_iii/TASKS.md`, and `phase_iii/INDEX.md`.
+- The highest-value gap is reproducible evidence. The audit framework already calls this out explicitly in `phase_ii/compliance/EVIDENCE_INDEX.md`, `phase_iii/TASKS.md`, and `phase_iii/INDEX.md`.
 - The reviewer independence gap is lower-risk only if the reviewer guide is fully executable. Right now the repo provides a guide, but it has not been validated from first-principles on a clean checkout.
 - Exit criteria are defined, but the current repo state still needs an explicit “this is complete / this is deferred” checklist to satisfy external audit expectations.
 

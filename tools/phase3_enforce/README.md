@@ -11,7 +11,7 @@ python3 tools/phase3_enforce/enforce.py --apply
 
 Files
 
-- `enforce.py` — minimal prototype: parses `phase_iii/CLAIM_TRACEABILITY_MATRIX.md` and `phase_iii/EVIDENCE_INDEX.md`, writes `phase_iii/ENFORCEMENT_REPORT.md`, `phase_iii/enforcement_tx.log`, and `phase_iii/enforcement_patch.diff`.
+- `enforce.py` — minimal prototype: parses `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md` and `phase_ii/compliance/EVIDENCE_INDEX.md`, writes `phase_iii/ENFORCEMENT_REPORT.md`, `phase_iii/enforcement_tx.log`, and `phase_iii/enforcement_patch.diff`.
 
 Notes
 

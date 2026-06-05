@@ -7,8 +7,8 @@ Define the objective conditions that must be true before Phase III is complete.
 The repository reaches Phase III completion when all of the following are true:
 
 1. `phase_iii/PHASE_III_CHARTER.md` is present and describes the Phase III mission.
-2. `phase_iii/CLAIM_TRACEABILITY_MATRIX.md` enumerates every substantive claim and links it to source, verification, evidence, and status.
-3. `phase_iii/EVIDENCE_INDEX.md` references every known Phase I and Phase II evidence artifact used for audit validation.
+2. `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md` enumerates every substantive claim and links it to source, verification, evidence, and status.
+3. `phase_ii/compliance/EVIDENCE_INDEX.md` references every known Phase I and Phase II evidence artifact used for audit validation.
 4. `phase_iii/OPEN_INVARIANTS.md` captures all unresolved claims, missing paths, and uncertainties.
 5. `phase_iii/AUDIT_CHECKLIST.md` provides a repeatable, reviewer-facing audit path.
 6. `phase_iii/EXIT_CRITERIA.md` clearly defines completion in reviewer terms.

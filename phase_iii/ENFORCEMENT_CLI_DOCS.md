@@ -63,7 +63,7 @@ python3 tools/phase3_enforce/enforce.py --revalidate "demo scenario playback"
 A claim is `VALIDATED` only if ALL of the following are true:
 
 1. **CV-1: Structural Validity**
-   - Claim exists in `phase_iii/CLAIM_TRACEABILITY_MATRIX.md`.
+   - Claim exists in `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md`.
    - Claim has a non-empty "Source Location" or explicit note if unsupported.
 
 2. **CV-2: Evidence Sufficiency**
@@ -166,12 +166,12 @@ This ensures PRs cannot introduce new unsupported claims.
 
 ### "No evidence artifacts scanned"
 
-- Verify `phase_iii/EVIDENCE_INDEX.md` exists and has a properly formatted table.
+- Verify `phase_ii/compliance/EVIDENCE_INDEX.md` exists and has a properly formatted table.
 - Run a `--dry-run` and check `phase_iii/ENFORCEMENT_REPORT.md` for parse errors.
 
 ### "Claims missing or claim count low"
 
-- Verify `phase_iii/CLAIM_TRACEABILITY_MATRIX.md` has a properly formatted table.
+- Verify `phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md` has a properly formatted table.
 - Check that backticks around claim names are present and correctly formatted.
 
 ### "Linked claims not matching"

@@ -1,4 +1,4 @@
-# Phase III Claim Traceability Matrix
+# Phase II Compliance Claim Traceability Matrix
 
 ## Purpose
 Map every substantive claim in the repository to source code, verification method, evidence artifact, and status.
@@ -16,7 +16,7 @@ Map every substantive claim in the repository to source code, verification metho
 | `scenario_runner` CLI claim | none present | N/A | none | OPEN | INVALID_STRUCTURE |
 | `ise_runner` CLI claim | none present | N/A | none | OPEN | INVALID_STRUCTURE |
 | Phase III prediction payload sampling and validation | `README.md`, `OPERATIONAL_MANUAL.md` | review implementation and sample outputs | `test_vectors/*`, `scripts/*` | PARTIAL | PENDING_EVIDENCE |
-| Independent audit readiness | `phase_ii/` reports + `phase_iii/` framework | review traceability and evidence completeness | `phase_ii/*`, `phase_iii/*` | PARTIAL | PENDING_EVIDENCE |
+| Independent audit readiness | `phase_ii/` reports + `phase_ii/compliance/` framework | review traceability and evidence completeness | `phase_ii/*`, `phase_ii/compliance/*` | PARTIAL | PENDING_EVIDENCE |
 
 ## Notes
 - Claims with no source location are intentionally surfaced as OPEN.

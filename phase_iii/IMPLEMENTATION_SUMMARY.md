@@ -16,8 +16,8 @@ This session successfully implemented Phase III — the audit readiness phase of
 |---|---|---|
 | [phase_iii/INDEX.md](phase_iii/INDEX.md) | Master index and entry point for auditors | ✅ Complete |
 | [phase_iii/PHASE_III_CHARTER.md](phase_iii/PHASE_III_CHARTER.md) | Mission statement: reproducible → auditable | ✅ Complete |
-| [phase_iii/CLAIM_TRACEABILITY_MATRIX.md](phase_iii/CLAIM_TRACEABILITY_MATRIX.md) | 12 claims mapped to source, tests, evidence, and state | ✅ Complete |
-| [phase_iii/EVIDENCE_INDEX.md](phase_iii/EVIDENCE_INDEX.md) | 14 evidence artifacts classified by type and reproducibility | ✅ Complete |
+| [phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md](phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md) | 12 claims mapped to source, tests, evidence, and state | ✅ Complete |
+| [phase_ii/compliance/EVIDENCE_INDEX.md](phase_ii/compliance/EVIDENCE_INDEX.md) | 14 evidence artifacts classified by type and reproducibility | ✅ Complete |
 | [phase_iii/OPEN_INVARIANTS.md](phase_iii/OPEN_INVARIANTS.md) | 7 unresolved items, transparently documented | ✅ Complete |
 | [phase_iii/AUDIT_CHECKLIST.md](phase_iii/AUDIT_CHECKLIST.md) | Step-by-step procedure for independent auditors | ✅ Complete |
 | [phase_iii/EXIT_CRITERIA.md](phase_iii/EXIT_CRITERIA.md) | Definition of "Phase III complete" | ✅ Complete |
@@ -162,8 +162,8 @@ scripts/
 
 ✅ An independent reviewer can:
 - Start at [phase_iii/REVIEWER_START.md](phase_iii/REVIEWER_START.md)
-- Understand all claims from [CLAIM_TRACEABILITY_MATRIX.md](phase_iii/CLAIM_TRACEABILITY_MATRIX.md)
-- Locate all evidence from [EVIDENCE_INDEX.md](phase_iii/EVIDENCE_INDEX.md)
+- Understand all claims from [CLAIM_TRACEABILITY_MATRIX.md](phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md)
+- Locate all evidence from [EVIDENCE_INDEX.md](phase_ii/compliance/EVIDENCE_INDEX.md)
 - Identify unresolved items from [OPEN_INVARIANTS.md](phase_iii/OPEN_INVARIANTS.md)
 - Follow [AUDIT_CHECKLIST.md](phase_iii/AUDIT_CHECKLIST.md) step-by-step
 - Run `python3 tools/phase3_enforce/enforce.py --dry-run` to validate state

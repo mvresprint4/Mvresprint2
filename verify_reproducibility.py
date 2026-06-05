@@ -22,8 +22,8 @@ REQUIRED_TAXONOMY_TAGS = [
     "VERIFICATION_OUTPUT",
 ]
 
-EVIDENCE_INDEX_PATH = Path("phase_iii/EVIDENCE_INDEX.md")
-REBUILD_GRAPH_PATH = Path("phase_iii/EVIDENCE_REBUILD_GRAPH.md")
+EVIDENCE_INDEX_PATH = Path("phase_ii/compliance/EVIDENCE_INDEX.md")
+REBUILD_GRAPH_PATH = Path("phase_ii/compliance/EVIDENCE_REBUILD_GRAPH.md")
 
 
 def check_volatile_paths(filepath: Path):

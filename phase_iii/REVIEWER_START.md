@@ -57,7 +57,7 @@ ls -la phase_iii/
 cat phase_iii/PHASE_III_CHARTER.md
 
 # See every claim and its status
-cat phase_iii/CLAIM_TRACEABILITY_MATRIX.md
+cat phase_ii/compliance/CLAIM_TRACEABILITY_MATRIX.md
 ```
 
 Key things to look for:
@@ -69,7 +69,7 @@ Key things to look for:
 
 ```bash
 # See all evidence artifacts and their reproducibility
-cat phase_iii/EVIDENCE_INDEX.md
+cat phase_ii/compliance/EVIDENCE_INDEX.md
 
 # Verify repo-local evidence exists
 ls phase_ii/evidence/
