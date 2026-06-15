@@ -125,3 +125,11 @@ The definitions, interpretations, and specifications contained within this Appen
 Where ambiguity exists between interpretive descriptions and operational implementation, the definitions contained herein shall govern framework interpretation unless superseded by future canonical revision.
 This Appendix shall be cited as:
 Appendix A: Canonical Clarifications and Operational Definitions (TLBSS Reference Corpus).
+
+---
+
+## Formal Mathematical Foundation
+
+For formal mathematical treatment of TLBSS coherence operators, invariant structures, and TITOS measurement layer, see:
+
+**TLBSS_TITOS_Formalization.tex** — Formal mathematical paper defining coherence operators C, invariant sets I_C, measurement error functionals, resonance operators, and stability closure theorems.
