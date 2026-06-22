@@ -145,6 +145,30 @@ The unified state vector now includes:
 
 These are time-aligned and validated before execution.
 
+## MVRE Kernel Runtime
+
+### Files
+
+- kernel runtime: [`src/mvre_kernel.rs`](/workspaces/M.V.R.ESPRINT1/src/mvre_kernel.rs)
+- telemetry model: [`src/telemetry.rs`](/workspaces/M.V.R.ESPRINT1/src/telemetry.rs)
+
+### Responsibilities
+
+- deterministic hybrid control policy selection across Bayesian, robust, viability, and safe modes
+- structured belief updates from incoming telemetry frames
+- substrate state transitions using control commands and disturbance inputs
+- trace emission for sovereign audit logging via the kernel execution cycle
+
+### Behavior
+
+- `execute_cycle` updates belief, selects control mode, computes control, transitions substrate state, and appends a sovereign trace record
+- control mode selection is based on observability, identifiability, and state confidence heuristics
+- the runtime is designed for fail-safe fallback to safe isolation mode when confidence is low or disturbance is high
+
+### Notes
+
+The MVRE kernel runtime is currently implemented as a library component, not a standalone binary, and is intended to be exercised through the existing scenario and integration harness paths.
+
 ### Audit Requirements
 
 The Markdown audit ticket includes:

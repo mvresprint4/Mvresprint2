@@ -156,6 +156,21 @@ Behavior:
 - `make pilot-scenario` verifies workspace inputs, runs the scenario, emits the audit ticket, and confirms deterministic validation
 - `make full-scenario` runs the release binaries, logs under [`logs/full/`](/workspaces/M.V.R.ESPRINT1/logs/full), and appends [`performance_ledger.json`](/workspaces/M.V.R.ESPRINT1/performance_ledger.json)
 
+### MVRE Kernel Runtime
+
+The repository now includes the MVRE hybrid control runtime in `src/mvre_kernel.rs` and the structured telemetry model in `src/telemetry.rs`.
+
+Use this runtime via the existing scenario and integration harness paths rather than as a separate executable.
+
+Key behaviors:
+
+- belief update from `TelemetryFrame`
+- control mode selection across `Bayesian`, `Robust`, `Viability`, and `Safe`
+- substrate transition via deterministic control and disturbance processing
+- secure trace emission to the sovereign audit log
+
+`--verbose` mode in `scenario_runner` already exposes stage telemetry and kernel transition information for runtime inspection.
+
 ### Formal Harness
 
 ```bash

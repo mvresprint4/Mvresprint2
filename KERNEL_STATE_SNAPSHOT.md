@@ -16,6 +16,8 @@ The following kernel-related source files are currently present:
 - `src/sovereign_kernel.rs`
 - `src/kernel.rs`
 - `src/sovereign_bus.rs`
+- `src/mvre_kernel.rs`
+- `src/telemetry.rs`
 - `src/crypto_pipeline.rs`
 - `src/interface_discovery.rs`
 - `src/hal_output.rs`

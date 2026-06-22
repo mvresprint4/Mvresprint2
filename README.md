@@ -173,10 +173,20 @@ Key library modules exported from [`src/lib.rs`](/workspaces/M.V.R.ESPRINT1/src/
 
 - assurance and policy: `audit_guardian`, `regulatory_policy`, `constraint_system`, `compliance`
 - simulation and harnessing: `simulation`, `simulation_harness_core`, `adversarial_harness`, `demo_pipeline`
-- sovereign/runtime concepts: `sovereign_kernel`, `sovereign_trace`, `sovereign_bus`, `kernel`
-- interfaces and drivers: `interface_discovery`, `protocol_drivers`, `operator_interface`, `drivers`, `sp_api`
+- sovereign/runtime concepts: `sovereign_kernel`, `sovereign_trace`, `sovereign_bus`, `kernel`, `mvre_kernel`
+- interfaces and drivers: `interface_discovery`, `protocol_drivers`, `operator_interface`, `drivers`, `sp_api`, `telemetry`
 - execution/codegen: `universal_frontend`, `ir_codegen`, `ir_backends`, `crypto_pipeline`
 - SCED chain path: `sced_offer_chain`, `sced_decomposition`, `phase3_prediction`
+
+### New Kernel Runtime Components
+
+The repository now includes the MVRE hybrid kernel runtime in `src/mvre_kernel.rs`, with:
+
+- `KernelState` for substrate, belief, control mode, and timestamp state
+- mode selection across Bayesian, Robust, Viability, and Safe control policies
+- `execute_cycle` for deterministic belief update, control computation, substrate transition, and trace logging
+
+Telemetry support is modeled in `src/telemetry.rs`, including `TelemetryFrame` and `Disturbance` structures used by the kernel.
 
 ## Recommended Commands
 
