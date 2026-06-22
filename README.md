@@ -167,6 +167,18 @@ Their roles:
 - `verifier`: validates JSON attestation chains for `AttestationRecord` using the shared Ed25519-backed verification path
 - `sced_chain`: validates and benchmarks SCED offer-chain CSVs
 
+### 6. ABF-3: Adversarial Buffer Firewall
+
+The repository includes a pre-kernel adversarial input firewall (ABF-3) that is
+implemented inline in the ingress and kernel transition paths. See:
+
+- `src/ai_ingestion_buffer.rs` — ingress sanitization and `ABF3Sanitize`.
+- `src/adversarial_harness.rs` — adversarial frame types and mutation vectors.
+- `src/mvre_kernel.rs` — `semantic_equivalence()` guard and HALT emission.
+
+ABF-3 enforces numeric sanity (no NaN/Inf), payload shape, and a hard
+invariant at the state transition boundary. Violations emit `HALT_0xABF3`.
+
 ## Repository Shape
 
 Key library modules exported from [`src/lib.rs`](/workspaces/M.V.R.ESPRINT1/src/lib.rs):

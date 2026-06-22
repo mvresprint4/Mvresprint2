@@ -131,6 +131,25 @@ Determinism is preserved through the following rules:
 - no nondeterministic randomness exists in the replay path
 - partial audit artifacts are not left behind on failure
 
+## ABF-3: Adversarial Buffer Firewall (ABF-3)
+
+ABF-3 is a pre-kernel correctness firewall anchored directly into existing ingress
+and kernel boundaries (no standalone crate). It enforces sanitization and a hard
+invariant check at the state transition boundary to ensure adversarial inputs do
+not produce non-equivalent kernel transitions.
+
+- Role: pre-kernel sanitization and invariant gate (ingress + transition guard)
+- Anchored files:
+  - `src/ai_ingestion_buffer.rs` — ingress sanitization (`ABF3Sanitize` / `ingest`) 
+  - `src/adversarial_harness.rs` — adversarial frame / mutation generators
+  - `src/mvre_kernel.rs` — `KernelState::semantic_equivalence()` and transition HALT
+  - `src/sovereign_kernel.rs` — HALT emission sink (`emit_halt("HALT_0xABF3")`)
+- Behavior: reject NaN/Inf, malformed payloads, normalize numeric edge cases.
+- Failure semantics: a non-equivalent state transition triggers `HALT_0xABF3` and
+  a `SystemHalt` path; this is intentional — violations fail closed.
+
+Phase 1 implementation is embedded directly in the existing files above; do not
+introduce a floating enforcement crate until a stable interconnect (YBus) exists.
 ## Failure Model
 
 Failure is treated as a first-class output contract rather than an incidental log message.

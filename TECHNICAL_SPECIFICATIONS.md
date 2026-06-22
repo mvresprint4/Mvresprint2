@@ -297,6 +297,26 @@ This object is emitted:
 - on failing `scenario_runner --json` executions
 - inside failing ISE JSON reports
 
+### ABF-3 Integration (Ingress + Transition Guard)
+
+ABF-3 (Adversarial Buffer Firewall) is implemented as an embedded, pre-kernel
+invariant gate. Key points for operators and developers:
+
+- `src/ai_ingestion_buffer.rs` implements `ABF3Sanitize` and `ingest()` which
+  convert an `AdversarialFrame` into a `Setpoint` (the canonical `CleanFrame`).
+- `src/adversarial_harness.rs` provides `AdversarialFrame` and mutation helpers
+  (NaN/Inf injection, structural shuffle, truncation, timing skew) used by tests
+  and adversarial simulations.
+- `src/mvre_kernel.rs` now runs a semantic equivalence check between `prior_state`
+  and `next_state` using `KernelState::semantic_equivalence()`; on violation the
+  kernel calls `crate::sovereign_kernel::emit_halt("HALT_0xABF3")` and returns
+  a `SystemHalt` with `FailureAxis::ExternalInjectionDetected`.
+
+Operational impact: ABF-3 fails closed on invariant violations. Developers
+should not bypass the ingress sanitizer or the kernel semantic guard. This
+design preserves deterministic auditability by keeping enforcement inside the
+existing kernel and ingress boundaries.
+
 ## Current Known-Good Binaries
 
 - `sced_chain`
