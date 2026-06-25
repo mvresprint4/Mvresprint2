@@ -1,0 +1,13 @@
+{
+  "invariants": [
+    {
+      "id": "INVARIANT_TELEMETRY_VALIDITY",
+      "inputs": "rts_invariants::TelemetryFrame",
+      "kani": {
+        "assumes": ["input.p.is_finite()", "input.q.is_finite()"],
+        "asserts": ["!input.p.is_nan()", "!input.q.is_nan()"]
+      },
+      "adversarial": ["nan_injection", "timestamp_wrap"]
+    }
+  ]
+}

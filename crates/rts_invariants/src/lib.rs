@@ -1,0 +1,14 @@
+#![allow(dead_code)]
+
+pub const INVARIANT_TELEMETRY_VALIDITY: &str = "INVARIANT_TELEMETRY_VALIDITY";
+pub const INVARIANT_TOPOLOGY_CONSISTENCY: &str = "INVARIANT_TOPOLOGY_CONSISTENCY";
+pub const INVARIANT_SETPOINT_DETERMINISM: &str = "INVARIANT_SETPOINT_DETERMINISM";
+pub const INVARIANT_CONSTRAINT_SAFETY: &str = "INVARIANT_CONSTRAINT_SAFETY";
+pub const INVARIANT_TIMING_BOUNDS: &str = "INVARIANT_TIMING_BOUNDS";
+
+#[derive(Debug, Clone, Copy)]
+pub struct TelemetryFrame {
+    pub p: f64,
+    pub q: f64,
+    pub timestamp: u64,
+}
