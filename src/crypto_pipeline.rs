@@ -60,7 +60,7 @@ impl CryptoPipeline {
             raw_input,
             signature,
             trace_parent,
-            CanonicalTime::from_millis(0).0,
+            CanonicalTime::from_millis(0).as_nanos() as u64,
         );
 
         // 2. Verify signature

@@ -91,7 +91,7 @@ impl SovereignMessage {
             intent,
             payload,
             invariants_applied,
-            timestamp: timestamp.0,
+            timestamp: timestamp.as_nanos() as u64,
             trace_parent,
         }
     }

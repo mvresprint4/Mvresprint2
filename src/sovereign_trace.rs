@@ -136,6 +136,7 @@ pub struct SovereignTrace {
     pub legal_justification: Option<LegalCitation>,
     pub is_authenticated: bool,
     pub state_transition: bool,
+    pub execution_fingerprint: Option<Vec<u8>>,
 }
 
 impl SovereignTrace {
@@ -163,6 +164,7 @@ impl SovereignTrace {
             legal_justification: Some(citation),
             is_authenticated: false,
             state_transition: false,
+            execution_fingerprint: None,
         }
     }
 }
@@ -216,6 +218,7 @@ impl TraceBuilder {
             legal_justification: Some(self.legal_citation),
             is_authenticated: false,
             state_transition: false,
+            execution_fingerprint: None,
         }
     }
 }

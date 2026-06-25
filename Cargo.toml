@@ -26,6 +26,7 @@ ed25519-dalek = "2.0"
 tempfile = "3.8"
 core_affinity = "0.8"
 hex = "0.4"
+chrono = "0.4"
 tss-esapi = "7.6.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -35,7 +36,21 @@ fxhash = "0.2"
 
 # Local deterministic core crate
 mvre_core_deterministic = { path = "mvre_core_deterministic" }
+verification_engine = { path = "crates/verification_engine" }
+adversarial_runtime = { path = "crates/adversarial_runtime" }
+rts_invariants = { path = "crates/rts_invariants" }
 
 [features]
 default = []
 tpm = []
+
+[workspace]
+members = [
+    "crates/rts_core",
+    "crates/rts_invariants",
+    "crates/verification_engine",
+    "crates/adversarial_runtime",
+    "crates/kani_bindings",
+]
+
+resolver = "2"

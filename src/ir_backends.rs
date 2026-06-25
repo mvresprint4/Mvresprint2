@@ -24,7 +24,7 @@
 
 use crate::universal_frontend::{IRModule, Value};
 use crate::ir_codegen::IRResult;
-use crate::testament_audit::{ExecutionTrace, TraceEvent};
+use crate::testament_audit::ExecutionTrace;
 use crate::deterministic_core::{DetScheduler, DetTask};
 
 // Use `DetScheduler` and `DetTask` from `deterministic_core` to centralize

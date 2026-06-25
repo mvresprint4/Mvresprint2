@@ -261,7 +261,11 @@ impl SovereignKernel {
             &transition_record_bytes,
             &final_state_bytes,
             1,
-        )?;
+        )
+        .map_err(|e| SystemHalt::new(
+            FailureAxis::InternalInvariantBreach,
+            &format!("Transaction commit failed: {:?}", e),
+        ))?;
 
         // Compute commitment hash and produce signature over commitment || pcr
         let commitment_bytes = commitment.to_bytes();
@@ -278,7 +282,7 @@ impl SovereignKernel {
             commitment: commitment.clone(),
             pcr_digest: pcr,
             signature,
-            timestamp: timestamp.0,
+            timestamp: timestamp.as_nanos() as u64,
             prev_hash,
         };
 

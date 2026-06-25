@@ -18,12 +18,17 @@
 #![deny(unsafe_code)]
 
 pub mod adversarial_harness;
+pub mod canonical_time;
 pub mod compliance;
 pub mod constraint_system;
 pub mod demo_pipeline;
+pub mod deterministic_core;
 pub mod drivers;
+pub mod evidence_repository;
 pub mod failure_axis;
 pub mod fiel;
+pub mod ise;
+pub mod ptp_compliance;
 pub mod sp_api;
 pub mod testament_audit;
 pub mod tlbss_types;
@@ -59,6 +64,4 @@ pub mod universal_frontend;
 pub mod ir_codegen;
 pub mod sovereign_bus;
 pub mod ir_backends;
-pub mod deterministic_core;
 pub mod crypto_pipeline;
-pub mod canonical_time;

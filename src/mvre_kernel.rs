@@ -9,6 +9,7 @@ use crate::failure_axis::SystemHalt;
 use crate::telemetry::{Disturbance, TelemetryFrame};
 use crate::tlbss_types::{BinaryState, ResonanceCurve};
 use crate::sovereign_trace::{SovereignTrace, SovereignTraceLog};
+use sha2::{Digest, Sha256};
 
 /// Discrete substrate state.
 #[derive(Debug, Clone)]
@@ -43,26 +44,19 @@ pub struct KernelState {
     pub belief: BeliefState,
     pub mode: ControlMode,
     pub timestamp: u64,
+    pub last_control_signal: ControlSignal,
+    pub hardware_actuation_permitted: bool,
+    pub last_validation_passed: bool,
+    pub last_fingerprint: [u8; 32],
 }
 
 /// Control commands issued by the MVRE kernel.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ControlSignal {
     pub halt: bool,
     pub shed_load: bool,
     pub lock_state: bool,
     pub drive_command: Option<u8>,
-}
-
-impl ControlSignal {
-    pub fn default() -> Self {
-        Self {
-            halt: false,
-            shed_load: false,
-            lock_state: false,
-            drive_command: None,
-        }
-    }
 }
 
 impl KernelState {
@@ -72,7 +66,76 @@ impl KernelState {
             belief,
             mode,
             timestamp,
+            last_control_signal: ControlSignal::default(),
+            hardware_actuation_permitted: true,
+            last_validation_passed: true,
+            last_fingerprint: [0u8; 32],
         }
+    }
+
+    fn mode_id(mode: ControlMode) -> u8 {
+        match mode {
+            ControlMode::Bayesian => 0,
+            ControlMode::Robust => 1,
+            ControlMode::Viability => 2,
+            ControlMode::Safe => 3,
+        }
+    }
+
+    pub fn compute_execution_fingerprint(
+        &self,
+        control: &ControlSignal,
+        disturbance: &Disturbance,
+        next_substrate: &SubstrateState,
+    ) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+
+        hasher.update(self.substrate.symbolic.as_u8().to_le_bytes());
+        hasher.update(self.substrate.cognitive.as_u8().to_le_bytes());
+        hasher.update(self.substrate.biological.as_u8().to_le_bytes());
+        hasher.update(self.substrate.resonance.frequency_hz.to_le_bytes());
+        hasher.update(self.substrate.resonance.amplitude.to_le_bytes());
+        hasher.update(self.substrate.resonance.damping_factor.to_le_bytes());
+
+        hasher.update([control.halt as u8]);
+        hasher.update([control.shed_load as u8]);
+        hasher.update([control.lock_state as u8]);
+        hasher.update([control.drive_command.unwrap_or(255)]);
+
+        hasher.update([disturbance.symbolic]);
+        hasher.update([disturbance.cognitive]);
+        hasher.update([disturbance.biological]);
+        hasher.update(disturbance.energy_norm.to_le_bytes());
+
+        hasher.update(next_substrate.symbolic.as_u8().to_le_bytes());
+        hasher.update(next_substrate.cognitive.as_u8().to_le_bytes());
+        hasher.update(next_substrate.biological.as_u8().to_le_bytes());
+        hasher.update(next_substrate.resonance.frequency_hz.to_le_bytes());
+        hasher.update(next_substrate.resonance.amplitude.to_le_bytes());
+        hasher.update(next_substrate.resonance.damping_factor.to_le_bytes());
+
+        hasher.update(self.belief.confidence.to_le_bytes());
+        for row in &self.belief.covariance {
+            for value in row {
+                hasher.update(value.to_le_bytes());
+            }
+        }
+        hasher.update(self.belief.observability_score.to_le_bytes());
+
+        hasher.update([Self::mode_id(self.mode)]);
+        hasher.update(self.timestamp.to_le_bytes());
+
+        hasher.finalize().into()
+    }
+
+    pub fn validate_actuation(&self, control: &ControlSignal, telemetry: &TelemetryFrame) -> bool {
+        let observability = calculate_observability(&self.substrate, telemetry);
+        let intended_command_present = control.halt || control.shed_load || control.lock_state || control.drive_command.is_some();
+
+        telemetry.observed_output.is_finite()
+            && telemetry.disturbance.energy_norm >= 0.0
+            && observability >= 0.0
+            && intended_command_present
     }
 }
 
@@ -242,20 +305,99 @@ pub fn execute_cycle(kernel: &mut KernelState, telemetry: TelemetryFrame, trace_
     kernel.belief = kernel.belief.update(&telemetry, &kernel.substrate);
     kernel.mode = select_mode(&kernel.belief, &kernel.substrate);
     let control = compute_control(kernel.mode, &kernel.substrate, &kernel.belief);
-    kernel.substrate = kernel.substrate.transition(&control, &telemetry.disturbance);
+    let next_substrate = kernel.substrate.transition(&control, &telemetry.disturbance);
+    let fingerprint = kernel.compute_execution_fingerprint(&control, &telemetry.disturbance, &next_substrate);
+    let validation_passed = kernel.validate_actuation(&control, &telemetry);
+    kernel.hardware_actuation_permitted = validation_passed && !control.halt;
+    kernel.last_control_signal = control.clone();
+    kernel.last_validation_passed = validation_passed;
+    kernel.last_fingerprint = fingerprint;
+
+    if kernel.hardware_actuation_permitted {
+        kernel.substrate = next_substrate;
+    }
+
     kernel.timestamp += 1;
 
-    let trace = SovereignTrace::new(
+    let actual_output = if kernel.hardware_actuation_permitted { 1.0 } else { 0.0 };
+    let mut trace = SovereignTrace::new(
         kernel.timestamp,
         telemetry.observed_output,
-        if control.halt { 0.0 } else { 1.0 },
+        actual_output,
         crate::regulatory_policy::GovernanceMode::Normal,
         crate::regulatory_policy::LegalCitation::default(),
     );
+    trace.execution_fingerprint = Some(fingerprint.to_vec());
     trace_log.append_state_transition(trace);
 }
 
 /// Deterministic kernel trace record for replay.
 pub fn commit_trace(_trace: SovereignTrace) -> Result<(), SystemHalt> {
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::telemetry::TelemetryFrame;
+    use crate::tlbss_types::BinaryState;
+    use crate::sovereign_trace::SovereignTraceLog;
+
+    fn base_kernel_state() -> KernelState {
+        KernelState::new(
+            SubstrateState {
+                symbolic: BinaryState::One,
+                cognitive: BinaryState::One,
+                biological: BinaryState::One,
+                resonance: ResonanceCurve {
+                    frequency_hz: 60.0,
+                    amplitude: 0.1,
+                    damping_factor: 0.05,
+                },
+            },
+            BeliefState {
+                confidence: 0.0,
+                covariance: [[0.0; 3]; 3],
+                observability_score: 0.0,
+            },
+            ControlMode::Safe,
+            0,
+        )
+    }
+
+    #[test]
+    fn test_compute_execution_fingerprint_is_deterministic() {
+        let kernel = base_kernel_state();
+        let disturbance = Disturbance::new(1, 0, 1, 0.5).unwrap();
+        let control = ControlSignal {
+            halt: true,
+            shed_load: true,
+            lock_state: true,
+            drive_command: None,
+        };
+        let next_substrate = kernel.substrate.transition(&control, &disturbance);
+
+        let fp1 = kernel.compute_execution_fingerprint(&control, &disturbance, &next_substrate);
+        let fp2 = kernel.compute_execution_fingerprint(&control, &disturbance, &next_substrate);
+
+        assert_eq!(fp1, fp2, "The execution fingerprint must be deterministic");
+        assert_eq!(fp1.len(), 32);
+    }
+
+    #[test]
+    fn test_execute_cycle_enforces_fail_closed_on_halt() {
+        let mut kernel = base_kernel_state();
+        let disturbance = Disturbance::new(0, 1, 0, 0.1).unwrap();
+        let telemetry = TelemetryFrame::new(disturbance.clone(), 0.5, vec![]);
+        let mut trace_log = SovereignTraceLog::new();
+
+        let pre_state = kernel.substrate.clone();
+
+        execute_cycle(&mut kernel, telemetry, &mut trace_log);
+
+        assert!(!kernel.hardware_actuation_permitted, "Hardware actuation must be disabled when Safe mode issues a halt signal");
+        assert_eq!(kernel.substrate.symbolic, pre_state.symbolic, "Substrate state must not advance when actuation is blocked");
+        assert_eq!(kernel.substrate.cognitive, pre_state.cognitive);
+        assert_eq!(kernel.substrate.biological, pre_state.biological);
+    }
 }
