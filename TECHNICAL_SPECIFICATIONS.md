@@ -1,6 +1,6 @@
 # M.V.R.ESPRINT1 Technical Specifications
 
-Updated to match the repository state verified on 2026-03-27.
+Updated to match the repository state verified on 2026-06-26.
 
 ## Scope
 

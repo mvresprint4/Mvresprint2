@@ -1,6 +1,6 @@
 # M.V.R.ESPRINT1 Pilot Brief
 
-Updated to match the working repository state on 2026-03-27.
+Updated to match the working repository state on 2026-06-26.
 
 ## Executive Summary
 
