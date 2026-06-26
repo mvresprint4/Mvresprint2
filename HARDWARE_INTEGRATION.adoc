@@ -1,0 +1,204 @@
+= M.V.R.ESPRINT1 Hardware Integration Guide
+
+This document is intended for hardware engineers who need to integrate the M.V.R.ESPRINT1 (MVRE) deterministic kernel into a custom unit.
+
+== 1. Purpose
+
+The MVRE kernel is a deterministic supervisory runtime that validates setpoints, preserves auditability, and generates attestation records for a custom power or control unit. It is not a local protection relay or predictive optimizer. Its role is to enforce deterministic validation and audit boundaries on externally generated commands.
+
+== 2. Integration Model
+
+The kernel expects to receive:
+
+- external commands or setpoints from a higher-level optimizer, operator station, or AI/ML module
+- telemetry snapshots from the unit sensors and plant state
+- optional hardware trust data when TPM-backed attestation is enabled
+
+The kernel produces:
+
+- validated/filtered control decisions
+- deterministic audit traces
+- attestation records for each execution tick
+
+The integration boundary is strictly:
+
+- input data ingestion (unit telemetry, external commands)
+- deterministic kernel execution
+- output command/actuation recommendation
+- audit trace export
+- optional TPM-based signing
+
+The kernel does not implement:
+
+- transport-layer protocols (ICCP, DNP3, IEC 61850)
+- native droop control or primary frequency response
+- physical device actuation drivers
+- real-time networking stacks
+
+== 3. Hardware Requirements
+
+The custom unit should provide:
+
+- a Linux-compatible runtime environment or Rust-compatible cross-build target
+- deterministic clock source; preferably a canonical time source derived from PTP or GPS
+- a reliable command/telemetry interface between the kernel host and plant I/O
+- optional TPM 2.0 device at `/dev/tpm0` when using hardware attestation
+
+The repository currently targets:
+
+- Rust 2021 edition
+- `cargo build --bins`
+- `cargo test --lib`
+- `cargo run --bin scenario_runner`
+- `cargo run --bin ise_runner`
+
+If TPM attestation is required, the unit must include a supported TPM 2.0 device and the runtime must be built with the `tpm` feature enabled.
+
+== 4. Kernel Entry Points
+
+The primary kernel modules and runtime interfaces are:
+
+- `src/kernel.rs` — deterministic kernel state machine, authority levels, and validation boundaries
+- `src/mvre_kernel.rs` — core substrate state, belief state, and deterministic execution fingerprinting
+- `src/sovereign_kernel.rs` — sovereign execution wrapper, signer abstraction, and attestation record generation
+- `src/ise.rs` — integration simulation environment for replaying scenario inputs and validating integration behavior
+- `src/deployment_manifest.rs` — deployment-level configuration and safety manifest semantics
+
+The runtime binaries available for integration and testing are:
+
+- `src/bin/scenario_runner.rs`
+- `src/bin/ise_runner.rs`
+- `src/bin/verifier.rs`
+- `src/bin/demo.rs`
+- `src/bin/dashboard.rs`
+
+== 5. Recommended Hardware Unit Architecture
+
+A hardware integration should be structured in three logical layers:
+
+1. Physical interface layer
+2. Kernel execution host
+3. Audit / attestation layer
+
+[cols="1,2"]
+|===
+| Layer | Responsibilities
+| Physical interface layer | Collect raw sensor telemetry, power measurements, breaker/disconnector states, and current/voltage values. Forward normalized state to the kernel host over a deterministic IPC or shared memory interface.
+| Kernel execution host | Run the MVRE binary or library, validate incoming setpoints, compute deterministic commands, and emit a validation result. Maintain a canonical state snapshot and support audit trace collection.
+| Audit / attestation layer | Persist trace records, sign attestation payloads, and export evidence artifacts. Use TPM-backed signing if enabled, otherwise simulated deterministic signing is used for testing.
+|===
+
+== 6. Data Interfaces
+
+The MVRE kernel expects the following interface patterns:
+
+=== 6.1 Command / Setpoint Input
+
+- Commands are validated by the kernel and may be classified as `PassThrough`, `Clamp`, `RateLimit`, or `FallbackToDroop`.
+- The hardware unit should send commands in a fixed schema with explicit fields for each control action.
+- The kernel currently supports a `ControlSignal` object in `src/mvre_kernel.rs` with fields:
+  * `halt`
+  * `shed_load`
+  * `lock_state`
+  * `drive_command`
+
+A custom unit should map its native actuation commands into this deterministic control vector before calling the kernel.
+
+=== 6.2 Telemetry Input
+
+Telemetry must contain the current process state and disturbance measurements. The kernel uses `TelemetryFrame` and `Disturbance` in `src/telemetry.rs`.
+
+Required telemetry-like data includes:
+
+- observed output or process variable
+- energy norm or disturbance measure
+- symbolic/cognitive/biological state indicators
+
+This telemetry is used by `KernelState::validate_actuation` and associated observability calculations.
+
+=== 6.3 Output Interface
+
+The kernel emits a validated command object; the hardware unit should:
+
+- serialize the returned command into the unit’s actuation protocol
+- ensure safe clamping and rate-limiting actions are represented
+- fall back to native droop/protection logic only when the kernel returns `FallbackToDroop` or a major failure
+
+== 7. TPM and Attestation Support
+
+The sovereign kernel supports pluggable signing via `src/sovereign_kernel.rs`.
+
+=== 7.1 Simulation Mode
+
+- Default mode for the current repository is `FixedKeySimulatedTpmSigner`.
+- It returns deterministic hash-based signatures for development and verification.
+- Use the environment variable `SIGNER_MODE=simulation`.
+
+=== 7.2 TPM Mode
+
+- Production mode requires a TPM-backed `TssEsapiSigner`.
+- This is enabled only when the crate is built with the `tpm` feature.
+- Set `SIGNER_MODE=tpm` and ensure `/dev/tpm0` is available.
+
+Example build and run command:
+
+----
+cargo build --features tpm --bin scenario_runner
+SIGNER_MODE=tpm cargo run --bin scenario_runner -- --mode pilot
+----
+
+If TPM is unavailable, the kernel will fail into a hardware unavailable state rather than silently proceed.
+
+== 8. Build and Deployment
+
+The repository is delivered as a Rust crate that can be built directly on the unit host.
+
+Recommended flow:
+
+1. Install Rust 2021 toolchain and required components: `rustfmt`, `clippy`.
+2. Clone the repository and verify the `Cargo.toml` manifest.
+3. Build the target binaries:
+
+----
+cargo build --bin scenario_runner --bin ise_runner --bin verifier --bin sced_chain
+----
+
+4. Deploy the binary and any required `target/` artifacts to the custom unit.
+5. Configure the hardware interface adapter to supply telemetry and command data.
+6. Execute the kernel in a deterministic environment and capture logs.
+
+If the custom unit cannot host Rust directly, the kernel can be cross-compiled for the target architecture and deployed as a static binary.
+
+== 9. Recommended Implementation Steps
+
+1. Map unit telemetry into the kernel’s expected `TelemetryFrame` and `Disturbance` semantics.
+2. Map external optimizer or operator setpoints into the kernel’s `ControlSignal` structure.
+3. Run the kernel in a supervised host process.
+4. Use the output command to drive actuation, but preserve native fail-safe or droop fallback if commands become invalid.
+5. Persist audit records and trace outputs from the kernel for post-mortem validation.
+6. If hardware attestation is desired, integrate TPM initialization and signer mode.
+
+== 10. Practical Notes for Hardware Engineers
+
+- The MVRE kernel is deterministic and audit-first; avoid adding device-specific nondeterministic behavior inside the kernel.
+- Treat the kernel as a validation and command filter boundary, not as the final actuator driver.
+- Prefer serialized IPC or shared memory for low-latency command delivery.
+- Use the kernel’s output state to decide whether the unit should continue with internal protection logic.
+- Preserve a canonical time source, especially when using trace/attestation generation.
+
+== 11. File References
+
+- `src/kernel.rs`
+- `src/mvre_kernel.rs`
+- `src/sovereign_kernel.rs`
+- `src/ise.rs`
+- `src/deployment_manifest.rs`
+- `src/bin/scenario_runner.rs`
+- `src/bin/ise_runner.rs`
+
+== 12. Next Actions
+
+- Validate the hardware command mapping against `ControlSignal`.
+- Validate telemetry mapping against `TelemetryFrame` and `Disturbance`.
+- Test with `cargo run --bin scenario_runner -- --mode pilot`.
+- Capture the audit log and verify the generated attestation records.
