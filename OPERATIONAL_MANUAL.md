@@ -1,4 +1,6 @@
-# M.V.R.ESPRINT1 Operational Manual
+# M.V.R.ESPRINT2 Operational Manual
+
+**Last Updated:** 2026-06-26
 
 This manual reflects the commands and workflows that are actually usable in the current repository state.
 
